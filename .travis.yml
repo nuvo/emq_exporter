@@ -2,3 +2,19 @@ language: go
 
 go:
 - 1.11.2
+
+services:
+- docker
+
+after_success:
+- if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then exit 0; fi
+- test -n "$TRAVIS_TAG" && docker login -u $DOCKER_USER -p $DOCKER_PASSWORD
+
+# calls goreleaser
+deploy:
+- provider: script
+  skip_cleanup: true
+  script: curl -sL https://git.io/goreleaser | bash
+  on:
+    tags: true
+    condition: $TRAVIS_OS_NAME = linux

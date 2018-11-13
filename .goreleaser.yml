@@ -1,0 +1,35 @@
+# .goreleaser.yml
+builds:
+- main: emq_exporter.go
+  binary: emq_exporter
+  goos:
+  - windows
+  - darwin
+  - linux
+  goarch:
+  - amd64
+  env:
+  - CGO_ENABLED=0
+  flags:
+  - -tags=netgo
+  ldflags:
+  - -s -w
+
+archive:
+  name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}"
+  format: tar.gz
+  wrap_in_directory: true
+  format_overrides:
+  - goos: windows
+    format: zip
+  replacements:
+    darwin: macos
+
+dockers:
+- binary: emq_exporter
+  goos: linux
+  goarch: amd64
+  dockerfile: Dockerfile
+  image_templates:
+  - "nuvo/{{ .ProjectName }}:latest"
+  - "nuvo/{{ .ProjectName }}:{{ .Tag }}"

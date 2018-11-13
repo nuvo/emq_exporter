@@ -1,6 +1,6 @@
 FROM quay.io/prometheus/busybox:latest
 
-COPY bin/emq_exporter /bin/emq_exporter
+COPY emq_exporter /bin/emq_exporter
 
 EXPOSE 9505
 
