@@ -18,7 +18,7 @@ build: fmt vet
 
 test: fmt vet
 	@echo ">> running tests"
-	go test $(pkgs)
+	go test $(pkgs) -coverprofile cover.out
 
 docker: build
 	@echo ">> building docker image"
