@@ -196,13 +196,13 @@ func (e *Exporter) fetch(target string) (map[string]interface{}, error) {
 	}
 
 	if err := json.Unmarshal(streamToByte(res.Body), &dat); err != nil {
-		return nil, fmt.Errorf("Failed to unmarshel json")
+		return nil, fmt.Errorf("Failed to unmarshal json")
 	}
 
 	return dat, nil
 }
 
-//Convert a straem into byte array
+//Convert a stream into byte array
 func streamToByte(stream io.Reader) []byte {
 	buf := new(bytes.Buffer)
 	buf.ReadFrom(stream)
