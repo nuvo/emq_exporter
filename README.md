@@ -74,7 +74,7 @@ EMQ exporter was designed to run as a sidecar in the same pod as EMQ itself. See
 
 We welcome contributions!
 
-Please see [CONTRIBUTING](./CONTRIBUTING.md) for guidelines on how to get involved.
+Please see [CONTRIBUTING](https://github.com/nuvo/emq_exporter/blob/master/CONTRIBUTING.md) for guidelines on how to get involved.
 
 ## License
-Apache License 2.0, see [LICENSE](./LICENSE).
+Apache License 2.0, see [LICENSE](https://github.com/nuvo/emq_exporter/blob/master/LICENSE).
