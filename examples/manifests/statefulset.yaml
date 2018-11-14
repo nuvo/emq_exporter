@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: emqtt
+  labels:
+    app.kubernetes.io/name: emqtt
+    app.kubernetes.io/part-of: emqtt
+spec:
+  serviceName: emqtt-headless
+  replicas: 2
+  updateStrategy:
+    type: RollingUpdate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: emqtt
+      app.kubernetes.io/part-of: emqtt
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: emqtt
+        app.kubernetes.io/part-of: emqtt
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9505"
+    spec:
+      serviceAccountName: emqtt
+      containers:
+      - name: exporter
+        image: "nuvo/emq_exporter:v0.1.0"
+        env:
+        - name: EMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: emqtt
+              key: admin_password
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        args:
+        - --emq.node=emqtt@$(POD_IP)
+        ports:
+        - name: metrics
+          containerPort: 9505
+      - name: emqtt
+        image: "kireevco/emqttd:latest"
+        ports:
+        - name: mqtt
+          containerPort: 1883
+        - name: mgmt
+          containerPort: 8080
+        - name: dashboard
+          containerPort: 18083
+        - name: mapping
+          containerPort: 4369
+        env:
+        - name: EMQ_NODE__COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: emqtt
+              key: node_cookie
+        - name: EMQ_DASHBOARD__DEFAULT_USER__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: emqtt
+              key: admin_password
+        - name: EMQ_CLUSTER__AUTOCLEAN
+          value: "5m"
+        - name: EMQ_CLUSTER__AUTOHEAL
+          value: "on"
+        - name: EMQ_CLUSTER__DISCOVERY
+          value: "k8s"
+        - name: EMQ_CLUSTER__K8S__ADDRESS_TYPE
+          value: "ip"
+        - name: EMQ_CLUSTER__K8S__APISERVER
+          value: "https://kubernetes.default.svc.cluster.local:443"
+        - name: EMQ_CLUSTER__K8S__APP_NAME
+          value: "emqtt"
+        - name: EMQ_CLUSTER__K8S__NAMESPACE
+          value: "default"
+        - name: EMQ_CLUSTER__K8S__SERVICE_NAME
+          value: "emqtt-headless"
+        - name: EMQ_CLUSTER__NAME
+          value: "emqcl"
+        - name: EMQ_NAME
+          value: "emqtt"
+        readinessProbe:
+          initialDelaySeconds: 20
+          exec:
+            command: ["/bin/sh", "-c", "emqttd_ctl status | grep 'is running'"]
+        livenessProbe:
+          initialDelaySeconds: 20
+          exec:
+            command: ["/bin/sh", "-c", "emqttd_ctl status | grep 'is running'"]
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "emqttd stop"]
