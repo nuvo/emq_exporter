@@ -68,7 +68,7 @@ docker run -p 9505:9505 nuvo/emq_exporter:v0.1.0 ---emq.uri="http://localhost:80
 
 ### Kubernetes
 
-EMQ exporter was designed to run as a sidecar in the same pod as EMQ itself. See the examples folder for a `kuberentes` manifest that can serve as reference for implementation.
+EMQ exporter was designed to run as a sidecar in the same pod as EMQ itself. See the examples folder for a `kubernetes` manifest that can serve as reference for implementation.
 
 ## Contributing
 
