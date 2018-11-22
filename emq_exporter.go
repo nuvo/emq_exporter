@@ -48,7 +48,7 @@ type Exporter struct {
 	totalScrapes             prometheus.Counter
 	apiVersion               string
 
-	metrics []metric
+	metrics []*metric
 }
 
 // NewExporter returns an initialized Exporter.
@@ -165,7 +165,7 @@ func (e *Exporter) addMetric(fqName, help string, value float64, labels []string
 	}
 
 	//append a new metric to the metrics array
-	e.metrics = append(e.metrics, metric{
+	e.metrics = append(e.metrics, &metric{
 		kind:  prometheus.GaugeValue,
 		desc:  prometheus.NewDesc(fqName, help, labels, nil),
 		value: value,
