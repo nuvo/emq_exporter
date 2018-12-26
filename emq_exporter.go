@@ -25,10 +25,15 @@ const (
 var (
 	//scraping endpoints for EMQ v2 api version
 	targetsV2 = map[string]string{
-		"monitoring_metrics": "/api/v2/monitoring/metrics/",
-		"monitoring_stats":   "/api/v2/monitoring/stats/",
-		"monitoring_nodes":   "/api/v2/monitoring/nodes/",
-		"management_nodes":   "/api/v2/management/nodes/",
+		"monitoring_metrics": "/api/v2/monitoring/metrics/%s",
+		"monitoring_stats":   "/api/v2/monitoring/stats/%s",
+		"monitoring_nodes":   "/api/v2/monitoring/nodes/%s",
+		"management_nodes":   "/api/v2/management/nodes/%s",
+	}
+	targetsV3 = map[string]string{
+		"node_metrics": "/api/v3/nodes/%s/metrics/",
+		"node_stats":   "/api/v3/nodes/%s/stats/",
+		"nodes":        "/api/v3/nodes/%s",
 	}
 )
 
@@ -39,8 +44,9 @@ type metric struct {
 }
 
 type emqResponse struct {
-	code   float64
-	result map[string]interface{}
+	Code   float64                `json:"code,omitempty"`
+	Result map[string]interface{} `json:"result,omitempty"` //api v2 json key
+	Data   map[string]interface{} `json:"data,omitempty"`   //api v3 json key
 }
 
 // Exporter collects EMQ stats from the given URI and exports them using
@@ -122,9 +128,12 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 func (e *Exporter) scrape() error {
 
 	var targets = make(map[string]string)
+	var data = make(map[string]interface{})
 
 	if e.apiVersion == "v2" {
 		targets = targetsV2
+	} else {
+		targets = targetsV3
 	}
 
 	for name, path := range targets {
@@ -134,11 +143,17 @@ func (e *Exporter) scrape() error {
 			return err
 		}
 
-		if resp.code != 0 {
+		if resp.Code != 0 {
 			return fmt.Errorf("Received code != 0")
 		}
 
-		for k, v := range resp.result {
+		if e.apiVersion == "v2" {
+			data = resp.Result
+		} else {
+			data = resp.Data
+		}
+
+		for k, v := range data {
 			fqName := fmt.Sprintf("%s_%s_%s", namespace, name, strings.Replace(k, "/", "_", -1))
 			switch vv := v.(type) {
 			case string:
@@ -180,7 +195,7 @@ func (e *Exporter) addMetric(fqName, help string, value float64, labels []string
 func (e *Exporter) fetch(target string) (emqResponse, error) {
 	var dat emqResponse
 
-	u := e.URI + target + e.node
+	u := e.URI + fmt.Sprintf(target, e.node)
 
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
@@ -240,7 +255,7 @@ func main() {
 		emqPassword   = kingpin.Flag("emq.password", "EMQ password.").Default("public").Envar("EMQ_PASSWORD").String()
 		emqNodeName   = kingpin.Flag("emq.node", "Node name of the emq node to scrape.").Default("emq@127.0.0.1").String()
 		emqTimeout    = kingpin.Flag("emq.timeout", "Timeout for trying to get stats from emq").Default("5s").Duration()
-		emqAPIVersion = kingpin.Flag("emq.api-version", "The API version used by EMQ").Default("v2").String()
+		emqAPIVersion = kingpin.Flag("emq.api-version", "The API version used by EMQ. Valid values: [v2, v3]").Default("v2").Enum("v2", "v3")
 	)
 
 	log.AddFlags(kingpin.CommandLine)
@@ -253,10 +268,6 @@ func main() {
 	exporter, err := NewExporter(*emqURI, *emqUsername, *emqPassword, *emqNodeName, *emqTimeout, *emqAPIVersion)
 	if err != nil {
 		log.Fatal(err)
-	}
-
-	if *emqAPIVersion != "v2" {
-		log.Fatal("Only v2 API version is currently implemented, exiting")
 	}
 
 	prometheus.MustRegister(exporter)
