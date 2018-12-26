@@ -56,8 +56,6 @@ EMQ add a `v3` api version in `EMQX`. To specify the api version, use the `emq.a
 ./emq_exporter --emq.uri="http://localhost:8080" --emq.username="admin" --emq.password="public" --emq.api-version="v3"
 ```
 
-Note - currently only `v2` api version is supported (and set as the flag's default value). Passing any other values will cause the exporter to panic. We plan to add support for `v3` api in future releases of the exporter.
-
 ### Docker
 
 To run EMQ exporter as a Docker container, run:

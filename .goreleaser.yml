@@ -13,7 +13,7 @@ builds:
   flags:
   - -tags=netgo
   ldflags:
-  - -s -w
+  - -s -w -X main.GitTag={{.Tag}} -X main.GitCommit={{.ShortCommit}}
 
 archive:
   name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}"
