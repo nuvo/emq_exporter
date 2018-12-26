@@ -1,6 +1,6 @@
 
 [![Release](https://img.shields.io/github/release/nuvo/emq_exporter.svg)](https://github.com/nuvo/emq_exporter/releases)
-[![Travis branch](https://img.shields.io/travis/nuvo/emq_exporter/master.svg)](https://travis-ci.org/emq_exporter/ocra)
+[![Travis branch](https://img.shields.io/travis/nuvo/emq_exporter/master.svg)](https://travis-ci.org/nuvo/emq_exporter)
 [![Docker Pulls](https://img.shields.io/docker/pulls/nuvo/emq_exporter.svg)](https://hub.docker.com/r/nuvo/emq_exporter/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/nuvo/emq_exporter)](https://goreportcard.com/report/github.com/nuvo/emq_exporter)
 [![license](https://img.shields.io/github/license/nuvo/emq_exporter.svg)](https://github.com/nuvo/emq_exporter/blob/master/LICENSE)

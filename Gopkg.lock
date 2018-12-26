@@ -82,14 +82,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:bd30d313365df74e31141209ee710ab25e811173df33b38c05e6480be7589b98"
+  digest = "1:12ab9f684bd965ccf3db033bbe6abcb96fda64a13a097f3ef6e81c36e9b16f0d"
   name = "github.com/prometheus/common"
   packages = [
     "expfmt",
     "internal/bitbucket.org/ww/goautoneg",
     "log",
     "model",
-    "version",
   ]
   pruneopts = "UT"
   revision = "0b1957f9d949dfa3084171a6ec5642b38055276a"
@@ -152,7 +151,6 @@
     "github.com/prometheus/client_golang/prometheus",
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/prometheus/common/log",
-    "github.com/prometheus/common/version",
     "gopkg.in/alecthomas/kingpin.v2",
   ]
   solver-name = "gps-cdcl"
