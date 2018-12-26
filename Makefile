@@ -24,7 +24,7 @@ vet: ## Vet code using go vet
 	@echo ">> vetting code"
 	go vet $(pkgs)
 
-build: fmt vet ## Build binaries
+build: fmt vet test ## Build binaries
 	@echo ">> building binaries"
 	go build -o ./bin/emq_exporter $(pkgs)
 

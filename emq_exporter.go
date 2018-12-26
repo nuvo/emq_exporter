@@ -30,6 +30,7 @@ var (
 		"monitoring_nodes":   "/api/v2/monitoring/nodes/%s",
 		"management_nodes":   "/api/v2/management/nodes/%s",
 	}
+	//scraping endpoints for EMQ v3 api version
 	targetsV3 = map[string]string{
 		"node_metrics": "/api/v3/nodes/%s/metrics/",
 		"node_stats":   "/api/v3/nodes/%s/stats/",
@@ -251,8 +252,8 @@ func main() {
 		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9505").String()
 		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
 		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:8080").String()
-		emqUsername   = kingpin.Flag("emq.username", "EMQ username.").Default("admin").Envar("EMQ_USERNAME").String()
-		emqPassword   = kingpin.Flag("emq.password", "EMQ password.").Default("public").Envar("EMQ_PASSWORD").String()
+		emqUsername   = kingpin.Flag("emq.username", "EMQ username (or use $EMQ_USERNAME env var)").Default("admin").Envar("EMQ_USERNAME").String()
+		emqPassword   = kingpin.Flag("emq.password", "EMQ password (or use $EMQ_PASSWORD env var)").Default("public").Envar("EMQ_PASSWORD").String()
 		emqNodeName   = kingpin.Flag("emq.node", "Node name of the emq node to scrape.").Default("emq@127.0.0.1").String()
 		emqTimeout    = kingpin.Flag("emq.timeout", "Timeout for trying to get stats from emq").Default("5s").Duration()
 		emqAPIVersion = kingpin.Flag("emq.api-version", "The API version used by EMQ. Valid values: [v2, v3]").Default("v2").Enum("v2", "v3")
@@ -260,6 +261,8 @@ func main() {
 
 	log.AddFlags(kingpin.CommandLine)
 	kingpin.Version(version.Print("emq_exporter"))
+	kingpin.CommandLine.HelpFlag.Short('h')
+
 	kingpin.Parse()
 
 	log.Infoln("Starting emq_exporter", version.Info())
