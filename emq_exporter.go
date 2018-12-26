@@ -38,6 +38,11 @@ type metric struct {
 	value float64
 }
 
+type emqResponse struct {
+	code   float64
+	result map[string]interface{}
+}
+
 // Exporter collects EMQ stats from the given URI and exports them using
 // the prometheus metrics package.
 type Exporter struct {
@@ -129,13 +134,11 @@ func (e *Exporter) scrape() error {
 			return err
 		}
 
-		if resp["code"].(float64) != 0 {
+		if resp.code != 0 {
 			return fmt.Errorf("Received code != 0")
 		}
 
-		result := resp["result"].(map[string]interface{})
-
-		for k, v := range result {
+		for k, v := range resp.result {
 			fqName := fmt.Sprintf("%s_%s_%s", namespace, name, strings.Replace(k, "/", "_", -1))
 			switch vv := v.(type) {
 			case string:
@@ -174,29 +177,29 @@ func (e *Exporter) addMetric(fqName, help string, value float64, labels []string
 }
 
 //get the response from the provided target url
-func (e *Exporter) fetch(target string) (map[string]interface{}, error) {
-	var dat map[string]interface{}
+func (e *Exporter) fetch(target string) (emqResponse, error) {
+	var dat emqResponse
 
 	u := e.URI + target + e.node
 
 	req, err := http.NewRequest("GET", u, nil)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get metrics from %s", u)
+		return dat, fmt.Errorf("Failed to get metrics from %s", u)
 	}
 
 	req.SetBasicAuth(e.username, e.password)
 	res, err := e.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("Failed to get metrics from %s", u)
+		return dat, fmt.Errorf("Failed to get metrics from %s", u)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Failed to get metrics from %s", u)
+		return dat, fmt.Errorf("Failed to get metrics from %s", u)
 	}
 
 	if err := json.Unmarshal(streamToByte(res.Body), &dat); err != nil {
-		return nil, fmt.Errorf("Failed to unmarshal json")
+		return dat, fmt.Errorf("Failed to unmarshal json")
 	}
 
 	return dat, nil
