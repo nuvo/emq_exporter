@@ -14,7 +14,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
-	"github.com/prometheus/common/version"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -260,13 +259,13 @@ func main() {
 	)
 
 	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(version.Print("emq_exporter"))
+	kingpin.Version(printVersion())
 	kingpin.CommandLine.HelpFlag.Short('h')
 
 	kingpin.Parse()
 
-	log.Infoln("Starting emq_exporter", version.Info())
-	log.Infoln("Build context", version.BuildContext())
+	log.Infoln("Starting emq_exporter")
+	log.Infoln("Version", printVersion())
 
 	exporter, err := NewExporter(*emqURI, *emqUsername, *emqPassword, *emqNodeName, *emqTimeout, *emqAPIVersion)
 	if err != nil {
@@ -274,7 +273,6 @@ func main() {
 	}
 
 	prometheus.MustRegister(exporter)
-	prometheus.MustRegister(version.NewCollector("emq_exporter"))
 
 	log.Infoln("Listening on", *listenAddress)
 	http.Handle(*metricsPath, promhttp.Handler())

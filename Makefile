@@ -26,7 +26,7 @@ vet: ## Vet code using go vet
 
 build: fmt vet test ## Build binaries
 	@echo ">> building binaries"
-	go build -o ./bin/emq_exporter $(pkgs)
+	go build -ldflags="-X main.GitTag=local -X main.GitCommit=dirty" -o ./bin/emq_exporter $(pkgs) 
 
 test: fmt vet ## Run tests using go test
 	@echo ">> running tests"
