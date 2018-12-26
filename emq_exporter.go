@@ -245,6 +245,13 @@ func parseString(s string) (float64, error) {
 	return v, nil
 }
 
+var (
+	// GitTag stands for a git tag, populated at build time
+	GitTag string
+	// GitCommit stands for a git commit hash populated at build time
+	GitCommit string
+)
+
 func main() {
 
 	var (
@@ -259,13 +266,13 @@ func main() {
 	)
 
 	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(printVersion())
+	kingpin.Version(fmt.Sprintf("Version %s (git-%s)", GitTag, GitCommit))
 	kingpin.CommandLine.HelpFlag.Short('h')
 
 	kingpin.Parse()
 
 	log.Infoln("Starting emq_exporter")
-	log.Infoln("Version", printVersion())
+	log.Infoln(fmt.Sprintf("Version %s (git-%s)", GitTag, GitCommit))
 
 	exporter, err := NewExporter(*emqURI, *emqUsername, *emqPassword, *emqNodeName, *emqTimeout, *emqAPIVersion)
 	if err != nil {
