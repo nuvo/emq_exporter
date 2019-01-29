@@ -1,4 +1,8 @@
 # .goreleaser.yml
+before:
+  hooks:
+    - make tidy
+
 builds:
 - main: emq_exporter.go
   binary: emq_exporter
@@ -10,6 +14,7 @@ builds:
   - amd64
   env:
   - CGO_ENABLED=0
+  - GO111MODULE=on
   flags:
   - -tags=netgo
   ldflags:
@@ -26,7 +31,8 @@ archive:
     darwin: macos
 
 dockers:
-- binary: emq_exporter
+- binaries: 
+  - emq_exporter
   goos: linux
   goarch: amd64
   dockerfile: Dockerfile
