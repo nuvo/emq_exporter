@@ -9,16 +9,16 @@ GO ?= GO111MODULE=$(GO111MODULE) go
 
 all: test build ## Run tests and build the binary
 
-tidy:
-	@echo ">> running go mod tidy"
+init:
+	@echo ">> running go mod download and tidy"
 	$(GO) mod download
 	$(GO) mod tidy
 
-fmt: tidy ## Format code using go fmt
+fmt: init ## Format code using go fmt
 	@echo ">> formatting code"
 	$(GO) fmt ./...
 
-vet: tidy ## Vet code using go vet
+vet: init ## Vet code using go vet
 	@echo ">> vetting code"
 	$(GO) vet ./...
 

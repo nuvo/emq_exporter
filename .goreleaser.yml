@@ -1,7 +1,7 @@
 # .goreleaser.yml
 before:
   hooks:
-    - make tidy
+    - make init
 
 builds:
 - main: emq_exporter.go
