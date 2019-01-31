@@ -1,10 +1,8 @@
 package main
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -35,6 +33,11 @@ var (
 		"node_stats":   "/api/v3/nodes/%s/stats/",
 		"nodes":        "/api/v3/nodes/%s",
 	}
+
+	//GitTag stands for a git tag, populated at build time
+	GitTag string
+	//GitCommit stands for a git commit hash populated at build time
+	GitCommit string
 )
 
 type metric struct {
@@ -49,11 +52,11 @@ type emqResponse struct {
 	Data   map[string]interface{} `json:"data,omitempty"`   //api v3 json key
 }
 
-// Exporter collects EMQ stats from the given URI and exports them using
+// Exporter collects EMQ stats from the given host and exports them using
 // the prometheus metrics package.
 type Exporter struct {
-	URI                      string
-	client                   http.Client
+	Host                     string
+	client                   *http.Client
 	username, password, node string
 	up                       prometheus.Gauge
 	totalScrapes             prometheus.Counter
@@ -63,15 +66,15 @@ type Exporter struct {
 }
 
 // NewExporter returns an initialized Exporter.
-func NewExporter(uri, username, password, node string, timeout time.Duration, apiVersion string) (*Exporter, error) {
+func NewExporter(uri, username, password, node, apiVersion string, timeout time.Duration) *Exporter {
 
 	return &Exporter{
-		URI:        uri,
+		Host:       uri,
 		username:   username,
 		password:   password,
 		node:       node,
 		apiVersion: apiVersion,
-		client: http.Client{
+		client: &http.Client{
 			Timeout: timeout,
 		},
 		up: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -84,7 +87,7 @@ func NewExporter(uri, username, password, node string, timeout time.Duration, ap
 			Name:      "exporter_total_scrapes",
 			Help:      "Current total scrapes.",
 		}),
-	}, nil
+	}
 
 }
 
@@ -138,19 +141,19 @@ func (e *Exporter) scrape() error {
 
 	for name, path := range targets {
 
-		resp, err := e.fetch(path)
+		res, err := e.fetch(path)
 		if err != nil {
 			return err
 		}
 
-		if resp.Code != 0 {
+		if res.Code != 0 {
 			return fmt.Errorf("Received code != 0")
 		}
 
 		if e.apiVersion == "v2" {
-			data = resp.Result
+			data = res.Result
 		} else {
-			data = resp.Data
+			data = res.Data
 		}
 
 		for k, v := range data {
@@ -192,44 +195,45 @@ func (e *Exporter) addMetric(fqName, help string, value float64, labels []string
 }
 
 //get the response from the provided target url
-func (e *Exporter) fetch(target string) (emqResponse, error) {
-	var dat emqResponse
+func (e *Exporter) fetch(target string) (*emqResponse, error) {
 
-	u := e.URI + fmt.Sprintf(target, e.node)
+	dat := &emqResponse{}
 
-	req, err := http.NewRequest("GET", u, nil)
+	u := e.Host + fmt.Sprintf(target, e.node)
+
+	log.Debugln("fetching from", u)
+
+	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
-		return dat, fmt.Errorf("Failed to get metrics from %s", u)
+		return dat, fmt.Errorf("Failed to create http request: %v", err)
 	}
 
 	req.SetBasicAuth(e.username, e.password)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "emp_exporter/"+GitTag)
+
 	res, err := e.client.Do(req)
 	if err != nil {
-		return dat, fmt.Errorf("Failed to get metrics from %s", u)
+		return dat, fmt.Errorf("Failed to get metrics from %s: %v", u, err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return dat, fmt.Errorf("Failed to get metrics from %s", u)
+		return dat, fmt.Errorf("Received status code not ok %s", u)
 	}
 
-	if err := json.Unmarshal(streamToByte(res.Body), &dat); err != nil {
-		return dat, fmt.Errorf("Failed to unmarshal json")
+	if err := json.NewDecoder(res.Body).Decode(dat); err != nil {
+		return dat, fmt.Errorf("Error in json decoder %v", err)
 	}
+
+	//Print the returned response data for debuging
+	log.Debugf("%#v", *dat)
 
 	return dat, nil
 }
 
-//Convert a stream into byte array
-func streamToByte(stream io.Reader) []byte {
-	buf := new(bytes.Buffer)
-	buf.ReadFrom(stream)
-	return buf.Bytes()
-}
-
 //Try to parse value from string to float64, return error on failure
 func parseString(s string) (float64, error) {
-
 	v, err := strconv.ParseFloat(s, 64)
 
 	if err != nil {
@@ -245,19 +249,11 @@ func parseString(s string) (float64, error) {
 	return v, nil
 }
 
-var (
-	// GitTag stands for a git tag, populated at build time
-	GitTag string
-	// GitCommit stands for a git commit hash populated at build time
-	GitCommit string
-)
-
 func main() {
-
 	var (
 		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9505").String()
 		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:8080").String()
+		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:18083").String()
 		emqUsername   = kingpin.Flag("emq.username", "EMQ username (or use $EMQ_USERNAME env var)").Default("admin").Envar("EMQ_USERNAME").String()
 		emqPassword   = kingpin.Flag("emq.password", "EMQ password (or use $EMQ_PASSWORD env var)").Default("public").Envar("EMQ_PASSWORD").String()
 		emqNodeName   = kingpin.Flag("emq.node", "Node name of the emq node to scrape.").Default("emq@127.0.0.1").String()
@@ -272,12 +268,9 @@ func main() {
 	kingpin.Parse()
 
 	log.Infoln("Starting emq_exporter")
-	log.Infoln(fmt.Sprintf("Version %s (git-%s)", GitTag, GitCommit))
+	log.Infof("Version %s (git-%s)\n", GitTag, GitCommit)
 
-	exporter, err := NewExporter(*emqURI, *emqUsername, *emqPassword, *emqNodeName, *emqTimeout, *emqAPIVersion)
-	if err != nil {
-		log.Fatal(err)
-	}
+	exporter := NewExporter(*emqURI, *emqUsername, *emqPassword, *emqNodeName, *emqAPIVersion, *emqTimeout)
 
 	prometheus.MustRegister(exporter)
 
