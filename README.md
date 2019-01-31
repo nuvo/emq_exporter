@@ -79,7 +79,7 @@ If things aren't working as expected, try to start the exporter with `--log.leve
 To run EMQ exporter as a Docker container, run:
 
 ```bash
-docker run -p 9505:9505 nuvo/emq_exporter:v0.3.1 ---emq.uri="http://localhost:8080"
+docker run -p 9540:9540 nuvo/emq_exporter:v0.3.1 ---emq.uri="http://localhost:8080"
 ```
 
 ### Kubernetes

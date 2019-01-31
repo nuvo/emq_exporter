@@ -251,7 +251,7 @@ func parseString(s string) (float64, error) {
 
 func main() {
 	var (
-		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9505").String()
+		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9540").String()
 		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
 		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:18083").String()
 		emqUsername   = kingpin.Flag("emq.username", "EMQ username (or use $EMQ_USERNAME env var)").Default("admin").Envar("EMQ_USERNAME").String()
@@ -268,7 +268,7 @@ func main() {
 	kingpin.Parse()
 
 	log.Infoln("Starting emq_exporter")
-	log.Infof("Version %s (git-%s)\n", GitTag, GitCommit)
+	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
 
 	exporter := NewExporter(*emqURI, *emqUsername, *emqPassword, *emqNodeName, *emqAPIVersion, *emqTimeout)
 
