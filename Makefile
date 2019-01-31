@@ -10,9 +10,8 @@ GO ?= GO111MODULE=$(GO111MODULE) go
 all: test build ## Run tests and build the binary
 
 init:
-	@echo ">> running go mod download and tidy"
+	@echo ">> running go mod download"
 	$(GO) mod download
-	$(GO) mod tidy
 
 fmt: init ## Format code using go fmt
 	@echo ">> formatting code"
@@ -34,11 +33,12 @@ docker: build ## Build docker image
 	@echo ">> building docker image"
 	@docker build -t "${IMAGE_NAME}:${IMAGE_TAG}" .
 
-run-local: ## Start a local emq container for development
+local: ## Start a local emq container for development
+	@echo ">> starting emqx container"
 	@docker run --rm -d --name emqx -h emqx -p 18083:18083 -p 8080:8080 emqx/emqx:latest
 
-run: build run-local ## Run the exporter locally using a local container
-	./bin/emq_exporter --emq.uri="http://127.0.0.1:18083" --emq.node="emqx@$(IP)" --emq.api-version="v3" --log.level="debug"
+run: build local ## Run the exporter locally using a local container
+	./bin/emq_exporter --emq.node="emqx@$(IP)" --emq.api-version="v3" --log.level="debug"
 
 help: ## Print this message and exit
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-20s %s\n", $$1, $$2}'

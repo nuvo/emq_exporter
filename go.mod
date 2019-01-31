@@ -16,6 +16,6 @@ require (
 	github.com/sirupsen/logrus v1.2.0 // indirect
 	golang.org/x/crypto v0.0.0-20181106171534-e4dc69e5b2fd // indirect
 	golang.org/x/sync v0.0.0-20181221193216-37e7f081c4d4 // indirect
-	golang.org/x/sys v0.0.0-20181107165924-66b7b1311ac8 // indirect
+	golang.org/x/sys v0.0.0-20181122145206-62eef0e2fa9b // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
