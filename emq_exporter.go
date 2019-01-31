@@ -4,11 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
-	"code.cloudfoundry.org/bytefmt"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -232,31 +230,13 @@ func (e *Exporter) fetch(target string) (*emqResponse, error) {
 	return dat, nil
 }
 
-//Try to parse value from string to float64, return error on failure
-func parseString(s string) (float64, error) {
-	v, err := strconv.ParseFloat(s, 64)
-
-	if err != nil {
-		//try to convert to bytes
-		u, err := bytefmt.ToBytes(s)
-		if err != nil {
-			log.Debugln("can't parse", s, err)
-			return v, err
-		}
-		v = float64(u)
-	}
-
-	return v, nil
-}
-
 func main() {
 	var (
 		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9540").String()
 		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:18083").String()
-		emqUsername   = kingpin.Flag("emq.username", "EMQ username (or use $EMQ_USERNAME env var)").Default("admin").Envar("EMQ_USERNAME").String()
-		emqPassword   = kingpin.Flag("emq.password", "EMQ password (or use $EMQ_PASSWORD env var)").Default("public").Envar("EMQ_PASSWORD").String()
-		emqNodeName   = kingpin.Flag("emq.node", "Node name of the emq node to scrape.").Default("emq@127.0.0.1").String()
+		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:18083").Short('u').String()
+		emqCreds      = kingpin.Flag("emq.creds-file", "Path to json file containing emq credentials").Default("./auth.json").Short('f').String()
+		emqNodeName   = kingpin.Flag("emq.node", "Node name of the emq node to scrape.").Default("emq@127.0.0.1").Short('n').String()
 		emqTimeout    = kingpin.Flag("emq.timeout", "Timeout for trying to get stats from emq").Default("5s").Duration()
 		emqAPIVersion = kingpin.Flag("emq.api-version", "The API version used by EMQ. Valid values: [v2, v3]").Default("v2").Enum("v2", "v3")
 	)
@@ -267,10 +247,17 @@ func main() {
 
 	kingpin.Parse()
 
+	log.Infoln("Loading authentication credentials")
+
+	username, password, err := LoadCreds(*emqCreds)
+	if err != nil {
+		log.Fatalf("Failed to load credentials: %v", err)
+	}
+
 	log.Infoln("Starting emq_exporter")
 	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
 
-	exporter := NewExporter(*emqURI, *emqUsername, *emqPassword, *emqNodeName, *emqAPIVersion, *emqTimeout)
+	exporter := NewExporter(*emqURI, username, password, *emqNodeName, *emqAPIVersion, *emqTimeout)
 
 	prometheus.MustRegister(exporter)
 

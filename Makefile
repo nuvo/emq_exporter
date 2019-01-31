@@ -23,7 +23,7 @@ vet: init ## Vet code using go vet
 
 build: fmt vet test ## Build binaries
 	@echo ">> building binaries"
-	$(GO) build -o ./bin/emq_exporter emq_exporter.go
+	$(GO) build -o ./bin/emq_exporter ./...
 
 test: fmt vet ## Run tests using go test
 	@echo ">> running tests"
@@ -38,9 +38,9 @@ local: ## Start a local emq container for development
 	@docker run --rm -d --name emqx -h emqx -p 18083:18083 -p 8080:8080 emqx/emqx:latest
 
 run: build local ## Run the exporter locally using a local container
-	./bin/emq_exporter --emq.node="emqx@$(IP)" --emq.api-version="v3" --log.level="debug"
+	./bin/emq_exporter -n "emqx@$(IP)" -f "testdata/auth-example.json" --emq.api-version "v3" --log.level "debug"
 
 help: ## Print this message and exit
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-20s %s\n", $$1, $$2}'
 
-.PHONY: all fmt vet build docker bootstrap help
+.PHONY: all fmt vet build docker bootstrap local run help
