@@ -28,5 +28,5 @@ Open up prometheus and see the metrics flow!
 * All metrics exported to prometheus will be prefixed with `emq_`
 * Some fields specify the `k8s` namespace in which `emq` was deployed (some env vars and the `rolebinding`). 
 If you're installing in another namespace, make sure to change those
-* The image used can be found in [docker hub](https://hub.docker.com/r/kireevco/emqttd/). Feel free to use which ever image you'd like
+* The image used can be found in [docker hub](https://hub.docker.com/r/emqx/emqx). Feel free to use which ever image you'd like
 * If you change the metrics port (e.g passing `--web.listen-address=PORT`), don't forget to change to annotation and port in the container spec

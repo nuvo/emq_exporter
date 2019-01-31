@@ -1,20 +1,20 @@
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: emqtt
+  name: emqx
   labels:
-    app.kubernetes.io/name: emqtt
-    app.kubernetes.io/part-of: emqtt
+    app.kubernetes.io/name: emqx
+    app.kubernetes.io/part-of: emqx
 
 ---
 
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
-  name: emqtt
+  name: emqx
   labels:
-    app.kubernetes.io/name: emqtt
-    app.kubernetes.io/part-of: emqtt
+    app.kubernetes.io/name: emqx
+    app.kubernetes.io/part-of: emqx
 rules:
   - apiGroups: [""]
     resources: ["endpoints"]
@@ -25,15 +25,15 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
 metadata:
-  name: emqtt
+  name: emqx
   labels:
-    app.kubernetes.io/name: emqtt
-    app.kubernetes.io/part-of: emqtt
+    app.kubernetes.io/name: emqx
+    app.kubernetes.io/part-of: emqx
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
-  name: emqtt
+  name: emqx
 subjects:
   - kind: ServiceAccount
-    name: emqtt
+    name: emqx
     namespace: default

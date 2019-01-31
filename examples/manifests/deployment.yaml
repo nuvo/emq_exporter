@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: emqx
+  labels:
+    app.kubernetes.io/name: emqx
+    app.kubernetes.io/part-of: emqx
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: emqx
+      app.kubernetes.io/part-of: emqx
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: emqx
+        app.kubernetes.io/part-of: emqx
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9505"
+    spec:
+      serviceAccountName: emqx
+      containers:
+      - name: exporter
+        image: "nuvo/emq_exporter:v0.3.1"
+        env:
+        - name: EMQ_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: emqx
+              key: admin_password
+        - name: POD_IP
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        args:
+        - --emq.node=emqx@$(POD_IP)
+        - --emq.api-version=v3
+        ports:
+        - name: metrics
+          containerPort: 9505
+      - name: emqx
+        image: "emqx/emqx:v3.0.1"
+        ports:
+        - name: mqtt
+          containerPort: 1883
+        - name: mgmt
+          containerPort: 8080
+        - name: dashboard
+          containerPort: 18083
+        env:
+        - name: EMQX_NODE__COOKIE
+          valueFrom:
+            secretKeyRef:
+              name: emqx
+              key: node_cookie
+        - name: EMQX_DASHBOARD__DEFAULT_USER__PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: emqx
+              key: admin_password
+        - name: EMQX_CLUSTER__AUTOCLEAN
+          value: "5m"
+        - name: EMQX_CLUSTER__AUTOHEAL
+          value: "on"
+        - name: EMQX_CLUSTER__DISCOVERY
+          value: "k8s"
+        - name: EMQX_CLUSTER__K8S__ADDRESS_TYPE
+          value: "ip"
+        - name: EMQX_CLUSTER__K8S__APISERVER
+          value: "https://kubernetes.default.svc.cluster.local:443"
+        - name: EMQX_CLUSTER__K8S__APP_NAME
+          value: "emqx"
+        - name: EMQX_CLUSTER__K8S__NAMESPACE
+          value: "default"
+        - name: EMQX_CLUSTER__K8S__SERVICE_NAME
+          value: "emqx"
+        - name: EMQX_NAME
+          value: emqx
+        readinessProbe:
+          initialDelaySeconds: 20
+          exec:
+            command: ["/bin/sh", "-c", "emqx_ctl status | grep 'is running'"]
+        livenessProbe:
+          initialDelaySeconds: 20
+          exec:
+            command: ["/bin/sh", "-c", "emqx_ctl status | grep 'is running'"]
+        lifecycle:
+          preStop:
+            exec:
+              command: ["/bin/sh", "-c", "emqx stop"]
