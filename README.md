@@ -28,35 +28,56 @@ Help on flags:
 
 ### EMQ URI
 
-Specify EMQ's node uri and api port using the `--emq.uri` flag. For example,
+Specify EMQ's node uri and api port using the `--emq.uri` flag (short `-u`). For example,
 
 ```bash
-./emq_exporter --emq.uri="http://localhost:8080"
+./emq_exporter --emq.uri "http://localhost:8080"
 ```
 
 Or to scrape a remote host:
 
 ```bash
-./emq_exporter --emq.uri="https://emq.example.com:8080"
+./emq_exporter -u "https://emq.example.com:8080"
 ```
 
-You will also need to specify the authentication credentials (see below for additional details):
+### Passing Credentials
+
+EMQ requires that calls made to the API endpoints be authenticated. The exporter supports two ways to pass credentials:
+
+1. Setting environment variables:
+* `EMQ_USERNAME` for username
+* `EMQ_PASSWORD` for the password
+
+No need to pass anything to `emq_exporter` when using these vars, they will be searched for automatically on startup.
+
+2. Using a file
+
+The file should be json formatted and contain the following structure:
+
+```json
+{
+  "username": "admin",
+  "password": "public"
+}
+```
+
+When staring `emq_exporter`, point it to the credentials file using `--emq.creds-file` flag (short `-f`):
 
 ```bash
-./emq_exporter --emq.uri="http://localhost:8080" --emq.username="admin" --emq.password="public"
+./emq_exporter -u http://localhost:8080 -f /etc/emq_exporter/auth.json
 ```
 
-The credentials can alternatively be specified in environment variables - `EMQ_USERNAME` and `EMQ_PASSWORD` respectively
+The default path for credentials file is `$(CWD)/auth.json`. Note that `env vars` take precedence over using a file.
 
 ### API Version
 
 EMQ add a `v3` api version in `EMQX`. To specify the api version, use the `emq.api-version` flag:
 
 ```bash
-./emq_exporter --emq.uri="http://localhost:8080" --emq.username="admin" --emq.password="public" --emq.api-version="v3"
+./emq_exporter -u http://localhost:8080 --emq.api-version v3
 ```
 
-The `emq_exporter` supports both `v2` and `v3` API versions seamlessly (mutually exclusive, pick either on start up)
+The `emq_exporter` supports both `v2` and `v3` API versions seamlessly (mutually exclusive, pick either on start up), default is `v2`.
 
 ### Authentication
 
@@ -64,7 +85,7 @@ The authentication method changed a bit in version `v3` of emq. If you're pullin
 1. From the emq dashboard side bar -> applications
 2. Select `New App` from the top 
 3. Fill in the popup window with the relevant details and confirm
-4. View the app details and use `AppID` as `--emq.username` and `AppSecret` as `--emq.password`
+4. View the app details and use `AppID` as `username` and `AppSecret` as `password` (as `creds-file` entries or `env vars`, see above)
 
 The default port `emq_exporter` uses is `18083`
 
@@ -72,14 +93,14 @@ See the docs for `v2` REST API [here](http://emqtt.io/docs/v2/rest.html) and for
 
 ### Troubleshooting
 
-If things aren't working as expected, try to start the exporter with `--log.level="debug"` flag. This will log additional details to the console and might help track down the problem. Fell free to raise an issue should you require additional help
+If things aren't working as expected, try to start the exporter with `--log.level debug` flag. This will log additional details to the console and might help track down the problem. Fell free to raise an issue should you require additional help.
 
 ### Docker
 
 To run EMQ exporter as a Docker container, run:
 
 ```bash
-docker run -p 9540:9540 nuvo/emq_exporter:v0.3.1 ---emq.uri="http://localhost:8080"
+docker run -p 9540:9540 nuvo/emq_exporter:v0.3.1 ---emq.uri "http://localhost:8080"
 ```
 
 ### Kubernetes
