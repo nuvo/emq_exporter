@@ -158,14 +158,18 @@ func (e *Exporter) add(fqName, help string, value float64) {
 		}
 	}
 
-	//append a new metric to the metrics array
-	e.metrics = append(e.metrics, &metric{
+	//create a new metric
+	m := &metric{
 		kind:  prometheus.GaugeValue,
 		name:  fqName,
 		help:  help,
 		value: value,
-	})
+	}
 
+	//append it to the metrics array
+	e.mu.Lock()
+	e.metrics = append(e.metrics, m)
+	e.mu.Unlock()
 }
 
 //get the response from the provided target url
