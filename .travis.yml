@@ -2,10 +2,21 @@
 language: go
 
 go:
-- 1.11.4
+    - 1.11.5
 
 services:
-- docker
+    - docker
+
+env:
+    - GO111MODULE=on
+
+install:
+    - go get -v github.com/onsi/ginkgo/ginkgo
+    - go get -v github.com/onsi/gomega
+    - go get -v -t ./...
+    - go mod download
+
+script: ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race --compilers=2
 
 # call goreleaser
 deploy:

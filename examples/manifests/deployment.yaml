@@ -30,6 +30,8 @@ spec:
       - name: exporter
         image: "nuvo/emq_exporter:v0.3.1"
         env:
+        - name: EMQ_USERNAME
+          value: "admin"
         - name: EMQ_PASSWORD
           valueFrom:
             secretKeyRef:
