@@ -127,9 +127,9 @@ var _ = Describe("Main", func() {
 				path := "testdata/authfull.json"
 
 				u, p, err := findCreds(path)
-				
+
 				Expect(err).ShouldNot(HaveOccurred())
-				
+
 				Expect(u).Should(Equal("admin"))
 				Expect(p).Should(Equal("secret"))
 			})
@@ -139,9 +139,9 @@ var _ = Describe("Main", func() {
 				path := "testdata/authfull.json"
 
 				u, p, err := findCreds(path)
-				
+
 				Expect(err).ShouldNot(HaveOccurred())
-				
+
 				Expect(u).Should(Equal("admin"))
 				Expect(p).Should(Equal("public"))
 			})
@@ -156,7 +156,7 @@ var _ = Describe("Main", func() {
 				s := "0.5"
 
 				v, err := parseString(s)
-				
+
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(v).Should(Equal(0.5))
 			})
@@ -165,7 +165,7 @@ var _ = Describe("Main", func() {
 				s := "123.19M"
 
 				v, err := parseString(s)
-				
+
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(v).Should(Equal(1.29174077e+08))
 			})
@@ -174,7 +174,7 @@ var _ = Describe("Main", func() {
 				s := "invalid string"
 
 				v, err := parseString(s)
-				
+
 				Expect(err).Should(HaveOccurred())
 				Expect(v).Should(Equal(float64(0)))
 			})
