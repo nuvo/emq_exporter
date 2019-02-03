@@ -249,7 +249,7 @@ func main() {
 
 	log.Infoln("Loading authentication credentials")
 
-	username, password, err := LoadCreds(*emqCreds)
+	username, password, err := findCreds(*emqCreds)
 	if err != nil {
 		log.Fatalf("Failed to load credentials: %v", err)
 	}

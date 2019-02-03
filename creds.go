@@ -10,72 +10,81 @@ import (
 	"github.com/prometheus/common/log"
 )
 
-//LoadCreds tries to load credentials in the follwing precedence:
+const (
+	usernameEnv = "EMQ_USERNAME"
+	passwordEnv = "EMQ_PASSWORD"
+)
+
+//findCreds tries to find credentials in the follwing precedence:
 //1. Env vars - EMQ_USERNAME && EMQ_PASSWORD
 //2. A file under the specified path
 //returns the found username and password or error
-func LoadCreds(path string) (string, string, error) {
-	log.Debugln("Trying to load credentails from environment")
-	u, p, err := loadFromEnv()
+func findCreds(path string) (u, p string, err error) {
+	log.Debugln("Loading credentails")
+	u, p, err = loadFromEnv()
 
 	if err != nil {
 		log.Debugln(err)
-		log.Debugln("Trying to load credentails from file")
 		return loadFromFile(path)
 	}
 
-	return u, p, nil
+	return
 }
 
 //Try to find auth details in env vars
-func loadFromEnv() (string, string, error) {
-	var u, p string
+func loadFromEnv() (u, p string, err error) {
+	log.Debugln("Trying to load credentails from environment")
 	var ok bool
 
-	u, ok = os.LookupEnv("EMQ_USERNAME")
+	u, ok = os.LookupEnv(usernameEnv)
 	if !ok {
-		return u, p, fmt.Errorf("Can't find EMQ_USERNAME")
+		err = fmt.Errorf("Can't find %s", usernameEnv)
+		return
 	}
 
-	p, ok = os.LookupEnv("EMQ_PASSWORD")
+	p, ok = os.LookupEnv(passwordEnv)
 	if !ok {
-		return u, p, fmt.Errorf("Can't find EMQ_PASSWORD")
+		err = fmt.Errorf("Can't find %s", passwordEnv)
+		return
 	}
 
-	return u, p, nil
+	return
 }
 
 //Try to load auth details from file
-func loadFromFile(path string) (string, string, error) {
-	type creds struct {
-		Username string `json:"username"`
-		Password string `json:"password"`
+func loadFromFile(path string) (u, p string, err error) {
+	log.Debugln("Trying to load credentails from file")
+	var data map[string]string
+
+	absPath, ferr := filepath.Abs(path)
+	if ferr != nil {
+		log.Debugln(ferr)
+		err = ferr
+		return
 	}
 
-	var err error
-
-	c := &creds{}
-
-	absPath, err := filepath.Abs(path)
-	if err != nil {
-		return c.Username, c.Password, err
+	f, rerr := ioutil.ReadFile(absPath)
+	if rerr != nil {
+		log.Debugln(rerr)
+		err = rerr
+		return
 	}
 
-	f, err := ioutil.ReadFile(absPath)
-	if err != nil {
-		return c.Username, c.Password, err
+	if jerr := json.Unmarshal(f, &data); jerr != nil {
+		log.Debugln(jerr)
+		err = jerr
+		return
 	}
 
-	if err := json.Unmarshal(f, c); err != nil {
-		return c.Username, c.Password, err
-	}
-
-	if c.Username == "" {
+	u = data["username"]
+	if u == "" {
 		err = fmt.Errorf("missing username in %s", path)
 	}
-	if c.Password == "" {
+
+	p = data["password"]
+	if p == "" {
 		err = fmt.Errorf("missing password in %s", path)
 	}
 
-	return c.Username, c.Password, err
+	return
 }
