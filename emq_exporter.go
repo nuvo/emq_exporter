@@ -39,16 +39,6 @@ var (
 	GitCommit string
 )
 
-//newDesc converts one e.metric to a Prometheus description
-func newDesc(m metric) *prometheus.Desc {
-	return prometheus.NewDesc(m.name, m.help, nil, nil)
-}
-
-//neMetric converts one e.metric to a Prometheus metric
-func newMetric(m metric) (prometheus.Metric, error) {
-	return prometheus.NewConstMetric(newDesc(m), m.kind, m.value)
-}
-
 // NewExporter returns an initialized Exporter.
 func NewExporter(c *config, timeout time.Duration) *Exporter {
 
@@ -75,30 +65,30 @@ func NewExporter(c *config, timeout time.Duration) *Exporter {
 // Collect implements prometheus.Collector.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
-	var up float64
+	var err error
 
-	if err := e.scrape(); err != nil {
+	if err = e.scrape(); err != nil {
 		log.Warnln(err)
-	} else {
-		e.mu.Lock()
-		up = 1
-		e.mu.Unlock()
 	}
 
 	//Send the metrics to the channel
 	e.mu.Lock()
 
-	e.up.Set(up)
+	if err != nil {
+		e.up.Set(0)
+	} else {
+		e.up.Set(1)
+	}
+	ch <- e.up
+
 	e.totalScrapes.Inc()
+	ch <- e.totalScrapes
 
 	metricList := make([]metric, 0, len(e.metrics))
 	for _, i := range e.metrics {
 		metricList = append(metricList, *i)
 	}
 	e.mu.Unlock()
-
-	ch <- e.up
-	ch <- e.totalScrapes
 
 	for _, i := range metricList {
 		m, err := newMetric(i)

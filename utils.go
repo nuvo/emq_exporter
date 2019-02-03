@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"code.cloudfoundry.org/bytefmt"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 )
 
@@ -22,4 +23,14 @@ func parseString(s string) (float64, error) {
 	}
 
 	return v, nil
+}
+
+//newDesc converts one e.metric to a Prometheus description
+func newDesc(m metric) *prometheus.Desc {
+	return prometheus.NewDesc(m.name, m.help, nil, nil)
+}
+
+//neMetric converts one e.metric to a Prometheus metric
+func newMetric(m metric) (prometheus.Metric, error) {
+	return prometheus.NewConstMetric(newDesc(m), m.kind, m.value)
 }
