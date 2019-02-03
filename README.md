@@ -7,8 +7,7 @@
 
 # EMQ exporter for Prometheus
 
-This is a simple server that scrapes EMQ metrics and exporters them via HTTP for
-Prometheus consumption.
+A simple server that scrapes EMQ metrics and exports them via HTTP for Prometheus consumption.
 
 ## Getting Started
 
@@ -52,7 +51,7 @@ No need to pass anything to `emq_exporter` when using these vars, they will be s
 
 2. Using a file
 
-The file should be json formatted and contain the following structure:
+The file should be json formatted and contain the following fields:
 
 ```json
 {
@@ -81,7 +80,7 @@ The `emq_exporter` supports both `v2` and `v3` API versions seamlessly (mutually
 
 ### Authentication
 
-The authentication method changed a bit in version `v3` of emq. If you're pulling the metrics through the dashboard port (default `18083`), you can use regular username and password. However, if you're using the API port (default `8080`), you'll need to set up application credentials: 
+The authentication method changed a bit in version `v3` of `emqx`. If you're pulling the metrics through the dashboard port (default `18083`), you can use regular username and password. However, if you're using the API port (default `8080`), you'll need to set up application credentials: 
 1. From the emq dashboard side bar -> applications
 2. Select `New App` from the top 
 3. Fill in the popup window with the relevant details and confirm
@@ -105,7 +104,8 @@ docker run -p 9540:9540 nuvo/emq_exporter:v0.3.1 ---emq.uri "http://localhost:80
 
 ### Kubernetes
 
-EMQ exporter was designed to run as a sidecar in the same pod as EMQ itself. See the examples folder for a `kubernetes` manifest that can serve as reference for implementation.
+EMQ exporter was designed to run as a sidecar in the same pod as EMQ itself. 
+See the examples folder for a `kubernetes` manifest that can serve as reference for implementation.
 
 ## Contributing
 

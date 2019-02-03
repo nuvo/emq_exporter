@@ -20,6 +20,8 @@ var _ = Describe("Main", func() {
 				u, p, err := loadFromEnv()
 
 				Expect(err).Should(HaveOccurred())
+				Expect(err.Error()).Should(Equal("Can't find EMQ_USERNAME"))
+
 				Expect(u).Should(BeEmpty())
 				Expect(p).Should(BeEmpty())
 			})
@@ -55,6 +57,7 @@ var _ = Describe("Main", func() {
 				u, p, err := loadFromEnv()
 
 				Expect(err).ShouldNot(HaveOccurred())
+
 				Expect(u).Should(Equal("admin"))
 				Expect(p).Should(Equal("secret"))
 			})
@@ -69,7 +72,7 @@ var _ = Describe("Main", func() {
 				Expect(err).Should(HaveOccurred())
 			})
 
-			It("should fail to unmarhsal inavalid json data", func() {
+			It("should fail to unmarhsal invalid json data", func() {
 				path := "testdata/malformed.txt"
 
 				_, _, err := loadFromFile(path)
@@ -124,7 +127,9 @@ var _ = Describe("Main", func() {
 				path := "testdata/authfull.json"
 
 				u, p, err := findCreds(path)
+				
 				Expect(err).ShouldNot(HaveOccurred())
+				
 				Expect(u).Should(Equal("admin"))
 				Expect(p).Should(Equal("secret"))
 			})
@@ -134,7 +139,9 @@ var _ = Describe("Main", func() {
 				path := "testdata/authfull.json"
 
 				u, p, err := findCreds(path)
+				
 				Expect(err).ShouldNot(HaveOccurred())
+				
 				Expect(u).Should(Equal("admin"))
 				Expect(p).Should(Equal("public"))
 			})
@@ -149,6 +156,7 @@ var _ = Describe("Main", func() {
 				s := "0.5"
 
 				v, err := parseString(s)
+				
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(v).Should(Equal(0.5))
 			})
@@ -157,6 +165,7 @@ var _ = Describe("Main", func() {
 				s := "123.19M"
 
 				v, err := parseString(s)
+				
 				Expect(err).ShouldNot(HaveOccurred())
 				Expect(v).Should(Equal(1.29174077e+08))
 			})
@@ -165,6 +174,7 @@ var _ = Describe("Main", func() {
 				s := "invalid string"
 
 				v, err := parseString(s)
+				
 				Expect(err).Should(HaveOccurred())
 				Expect(v).Should(Equal(float64(0)))
 			})
