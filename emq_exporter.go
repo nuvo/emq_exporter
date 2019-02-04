@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -32,126 +33,90 @@ var (
 		"nodes":        "/api/v3/nodes/%s",
 	}
 
+	up = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "up",
+		Help:      "Was the last scrape of EMQ successful",
+	})
+
+	totalScrapes = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "exporter_total_scrapes",
+		Help:      "Current total scrapes.",
+	})
+
 	//GitTag stands for a git tag, populated at build time
 	GitTag string
-	//GitCommit stands for a git commit hash populated at build time
+	//GitCommit stands for a git commit hash, populated at build time
 	GitCommit string
 )
 
-type metric struct {
-	kind  prometheus.ValueType
-	desc  *prometheus.Desc
-	value float64
-}
-
-type emqResponse struct {
-	Code   float64                `json:"code,omitempty"`
-	Result map[string]interface{} `json:"result,omitempty"` //api v2 json key
-	Data   map[string]interface{} `json:"data,omitempty"`   //api v3 json key
-}
-
-// Exporter collects EMQ stats from the given host and exports them using
-// the prometheus metrics package.
-type Exporter struct {
-	Host                     string
-	client                   *http.Client
-	username, password, node string
-	up                       prometheus.Gauge
-	totalScrapes             prometheus.Counter
-	apiVersion               string
-
-	metrics []*metric
-}
-
 // NewExporter returns an initialized Exporter.
-func NewExporter(uri, username, password, node, apiVersion string, timeout time.Duration) *Exporter {
+func NewExporter(c *config, timeout time.Duration) *Exporter {
 
 	return &Exporter{
-		Host:       uri,
-		username:   username,
-		password:   password,
-		node:       node,
-		apiVersion: apiVersion,
+		config: c,
 		client: &http.Client{
 			Timeout: timeout,
 		},
-		up: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "up",
-			Help:      "Was the last scrape of EMQ successful",
-		}),
-		totalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: namespace,
-			Name:      "exporter_total_scrapes",
-			Help:      "Current total scrapes.",
-		}),
+		mu: &sync.Mutex{},
 	}
-
 }
 
-// Collect fetches the stats from configured EMQ location and delivers them
-// as Prometheus metrics. It implements prometheus.Collector.
+// Collect implements prometheus.Collector.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
-	e.totalScrapes.Inc()
 
-	if err := e.scrape(); err != nil {
-		e.up.Set(0)
+	var err error
+
+	if err = e.scrape(); err != nil {
 		log.Warnln(err)
+	}
+
+	//Send the metrics to the channel
+	e.mu.Lock()
+
+	if err != nil {
+		up.Set(0)
 	} else {
-		e.up.Set(1)
+		up.Set(1)
+	}
+	ch <- up
+
+	totalScrapes.Inc()
+	ch <- totalScrapes
+
+	metricList := make([]metric, 0, len(e.metrics))
+	for _, i := range e.metrics {
+		metricList = append(metricList, *i)
+	}
+	e.mu.Unlock()
+
+	for _, i := range metricList {
+		m, err := newMetric(i)
+		if err != nil {
+			log.Errorf("newMetric: %v", err)
+			continue
+		}
+		ch <- m
 	}
 
-	for _, m := range e.metrics {
-		ch <- prometheus.MustNewConstMetric(
-			m.desc,
-			m.kind,
-			m.value,
-		)
-	}
-
-	ch <- e.up
-	ch <- e.totalScrapes
 }
 
-// Describe describes all the metrics ever exported by the EMQ exporter. It
-// implements prometheus.Collector.
+// Describe implements prometheus.Collector.
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
-	for _, m := range e.metrics {
-		ch <- m.desc
-	}
-
-	ch <- e.up.Desc()
-	ch <- e.totalScrapes.Desc()
+	ch <- up.Desc()
+	ch <- totalScrapes.Desc()
 }
 
 // get the json responses from the targets map, process them and
 // insert them into exporter.metrics array
 func (e *Exporter) scrape() error {
 
-	var targets = make(map[string]string)
-	var data = make(map[string]interface{})
+	for name, path := range e.config.targets {
 
-	if e.apiVersion == "v2" {
-		targets = targetsV2
-	} else {
-		targets = targetsV3
-	}
-
-	for name, path := range targets {
-
-		res, err := e.fetch(path)
+		data, err := e.fetch(path)
 		if err != nil {
 			return err
-		}
-
-		if res.Code != 0 {
-			return fmt.Errorf("Received code != 0")
-		}
-
-		if e.apiVersion == "v2" {
-			data = res.Result
-		} else {
-			data = res.Data
 		}
 
 		for k, v := range data {
@@ -162,9 +127,9 @@ func (e *Exporter) scrape() error {
 				if err != nil {
 					break
 				}
-				e.addMetric(fqName, k, val, nil)
+				e.add(fqName, k, val)
 			case float64:
-				e.addMetric(fqName, k, vv, nil)
+				e.add(fqName, k, vv)
 			default:
 				log.Debugln(k, "is of type I don't know how to handle")
 			}
@@ -174,60 +139,80 @@ func (e *Exporter) scrape() error {
 	return nil
 }
 
-func (e *Exporter) addMetric(fqName, help string, value float64, labels []string) {
-	//check if the metric with a given fqName exists, and update its value
+//add adds a metric to the exporter.metrics array
+func (e *Exporter) add(fqName, help string, value float64) {
+	//check if the metric with a given fqName exists
 	for _, v := range e.metrics {
-		if strings.Contains(v.desc.String(), fqName) {
+		if strings.Contains(newDesc(*v).String(), fqName) {
+			//update the metric value
+			e.mu.Lock()
 			v.value = value
+			e.mu.Unlock()
 			return
 		}
 	}
 
-	//append a new metric to the metrics array
-	e.metrics = append(e.metrics, &metric{
+	//create a new metric
+	m := &metric{
 		kind:  prometheus.GaugeValue,
-		desc:  prometheus.NewDesc(fqName, help, labels, nil),
+		name:  fqName,
+		help:  help,
 		value: value,
-	})
+	}
 
+	//append it to the e.metrics array
+	e.mu.Lock()
+	e.metrics = append(e.metrics, m)
+	e.mu.Unlock()
 }
 
 //get the response from the provided target url
-func (e *Exporter) fetch(target string) (*emqResponse, error) {
+func (e *Exporter) fetch(target string) (map[string]interface{}, error) {
 
-	dat := &emqResponse{}
+	data := &emqResponse{}
+	response := make(map[string]interface{})
 
-	u := e.Host + fmt.Sprintf(target, e.node)
+	u := e.config.host + fmt.Sprintf(target, e.config.node)
 
 	log.Debugln("fetching from", u)
 
 	req, err := http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
-		return dat, fmt.Errorf("Failed to create http request: %v", err)
+		return response, fmt.Errorf("Failed to create http request: %v", err)
 	}
 
-	req.SetBasicAuth(e.username, e.password)
+	req.SetBasicAuth(e.config.username, e.config.password)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "emp_exporter/"+GitTag)
 
 	res, err := e.client.Do(req)
 	if err != nil {
-		return dat, fmt.Errorf("Failed to get metrics from %s: %v", u, err)
+		return response, fmt.Errorf("Failed to get metrics from %s: %v", u, err)
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return dat, fmt.Errorf("Received status code not ok %s", u)
+		return response, fmt.Errorf("Received status code not ok %s", u)
 	}
 
-	if err := json.NewDecoder(res.Body).Decode(dat); err != nil {
-		return dat, fmt.Errorf("Error in json decoder %v", err)
+	if err := json.NewDecoder(res.Body).Decode(data); err != nil {
+		return response, fmt.Errorf("Error in json decoder %v", err)
+	}
+
+	if data.Code != 0 {
+		return response, fmt.Errorf("Recvied code != 0 from EMQ %f", data.Code)
 	}
 
 	//Print the returned response data for debuging
-	log.Debugf("%#v", *dat)
+	log.Debugf("%#v", *data)
 
-	return dat, nil
+	if e.config.apiVersion == "v2" {
+		response = data.Result
+	} else {
+		response = data.Data
+	}
+
+	return response, nil
 }
 
 func main() {
@@ -257,7 +242,22 @@ func main() {
 	log.Infoln("Starting emq_exporter")
 	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
 
-	exporter := NewExporter(*emqURI, username, password, *emqNodeName, *emqAPIVersion, *emqTimeout)
+	//config for use in the exporter
+	conf := &config{
+		host:       *emqURI,
+		username:   username,
+		password:   password,
+		node:       *emqNodeName,
+		apiVersion: *emqAPIVersion,
+	}
+
+	if *emqAPIVersion == "v2" {
+		conf.targets = targetsV2
+	} else {
+		conf.targets = targetsV3
+	}
+
+	exporter := NewExporter(conf, *emqTimeout)
 
 	prometheus.MustRegister(exporter)
 

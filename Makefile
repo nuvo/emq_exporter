@@ -3,6 +3,7 @@
 IMAGE_NAME := emq_exporter
 IMAGE_TAG ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 IP = $(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' emqx)
+RUNNING = $(shell docker ps | grep emqx)
 
 GO111MODULE := on
 GO ?= GO111MODULE=$(GO111MODULE) go
@@ -35,10 +36,11 @@ docker: build ## Build docker image
 
 local: ## Start a local emq container for development
 	@echo ">> starting emqx container"
+	@docker kill emqx || true
 	@docker run --rm -d --name emqx -h emqx -p 18083:18083 -p 8080:8080 emqx/emqx:latest
 
 run: build local ## Run the exporter locally using a local container
-	./bin/emq_exporter -n "emqx@$(IP)" -f "testdata/auth-example.json" --emq.api-version "v3" --log.level "debug"
+	./bin/emq_exporter -n emqx@$(IP) -f testdata/authfull.json --emq.api-version v3 --log.level debug
 
 help: ## Print this message and exit
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-20s %s\n", $$1, $$2}'
