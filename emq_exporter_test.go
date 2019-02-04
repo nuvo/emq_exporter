@@ -245,6 +245,7 @@ var _ = Describe("Exporter", func() {
 			password:   "public",
 			node:       "emq@" + s.URL(),
 			apiVersion: "v3",
+			targets:    targetsV3,
 		}
 
 		e = NewExporter(c, timeout)

@@ -26,6 +26,7 @@ type config struct {
 	password   string
 	node       string
 	apiVersion string
+	targets    map[string]string
 }
 
 // Exporter collects EMQ stats from the given host and exports them using

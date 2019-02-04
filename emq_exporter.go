@@ -112,15 +112,7 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 // insert them into exporter.metrics array
 func (e *Exporter) scrape() error {
 
-	var targets = make(map[string]string)
-
-	if e.config.apiVersion == "v2" {
-		targets = targetsV2
-	} else {
-		targets = targetsV3
-	}
-
-	for name, path := range targets {
+	for name, path := range e.config.targets {
 
 		data, err := e.fetch(path)
 		if err != nil {
@@ -149,9 +141,10 @@ func (e *Exporter) scrape() error {
 
 //add adds a metric to the exporter.metrics array
 func (e *Exporter) add(fqName, help string, value float64) {
-	//check if the metric with a given fqName exists, and update its value
+	//check if the metric with a given fqName exists
 	for _, v := range e.metrics {
 		if strings.Contains(newDesc(*v).String(), fqName) {
+			//update the metric value
 			e.mu.Lock()
 			v.value = value
 			e.mu.Unlock()
@@ -249,13 +242,19 @@ func main() {
 	log.Infoln("Starting emq_exporter")
 	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
 
-	//common config for use in the exporter
+	//config for use in the exporter
 	conf := &config{
 		host:       *emqURI,
 		username:   username,
 		password:   password,
 		node:       *emqNodeName,
 		apiVersion: *emqAPIVersion,
+	}
+
+	if *emqAPIVersion == "v2" {
+		conf.targets = targetsV2
+	} else {
+		conf.targets = targetsV3
 	}
 
 	exporter := NewExporter(conf, *emqTimeout)
