@@ -31,10 +31,8 @@ type config struct {
 // Exporter collects EMQ stats from the given host and exports them using
 // the prometheus metrics package.
 type Exporter struct {
-	config       *config
-	client       *http.Client
-	up           prometheus.Gauge
-	totalScrapes prometheus.Counter
+	config *config
+	client *http.Client
 
 	mu      *sync.Mutex
 	metrics []*metric

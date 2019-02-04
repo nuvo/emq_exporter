@@ -33,9 +33,21 @@ var (
 		"nodes":        "/api/v3/nodes/%s",
 	}
 
+	up = prometheus.NewGauge(prometheus.GaugeOpts{
+		Namespace: namespace,
+		Name:      "up",
+		Help:      "Was the last scrape of EMQ successful",
+	})
+
+	totalScrapes = prometheus.NewCounter(prometheus.CounterOpts{
+		Namespace: namespace,
+		Name:      "exporter_total_scrapes",
+		Help:      "Current total scrapes.",
+	})
+
 	//GitTag stands for a git tag, populated at build time
 	GitTag string
-	//GitCommit stands for a git commit hash populated at build time
+	//GitCommit stands for a git commit hash, populated at build time
 	GitCommit string
 )
 
@@ -48,18 +60,7 @@ func NewExporter(c *config, timeout time.Duration) *Exporter {
 			Timeout: timeout,
 		},
 		mu: &sync.Mutex{},
-		up: prometheus.NewGauge(prometheus.GaugeOpts{
-			Namespace: namespace,
-			Name:      "up",
-			Help:      "Was the last scrape of EMQ successful",
-		}),
-		totalScrapes: prometheus.NewCounter(prometheus.CounterOpts{
-			Namespace: namespace,
-			Name:      "exporter_total_scrapes",
-			Help:      "Current total scrapes.",
-		}),
 	}
-
 }
 
 // Collect implements prometheus.Collector.
@@ -75,14 +76,14 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.mu.Lock()
 
 	if err != nil {
-		e.up.Set(0)
+		up.Set(0)
 	} else {
-		e.up.Set(1)
+		up.Set(1)
 	}
-	ch <- e.up
+	ch <- up
 
-	e.totalScrapes.Inc()
-	ch <- e.totalScrapes
+	totalScrapes.Inc()
+	ch <- totalScrapes
 
 	metricList := make([]metric, 0, len(e.metrics))
 	for _, i := range e.metrics {
@@ -103,8 +104,8 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 
 // Describe implements prometheus.Collector.
 func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
-	ch <- e.up.Desc()
-	ch <- e.totalScrapes.Desc()
+	ch <- up.Desc()
+	ch <- totalScrapes.Desc()
 }
 
 // get the json responses from the targets map, process them and
@@ -146,7 +147,7 @@ func (e *Exporter) scrape() error {
 	return nil
 }
 
-//addMetric adds a metric to the exporter.Metric array
+//add adds a metric to the exporter.metrics array
 func (e *Exporter) add(fqName, help string, value float64) {
 	//check if the metric with a given fqName exists, and update its value
 	for _, v := range e.metrics {
@@ -166,7 +167,7 @@ func (e *Exporter) add(fqName, help string, value float64) {
 		value: value,
 	}
 
-	//append it to the metrics array
+	//append it to the e.metrics array
 	e.mu.Lock()
 	e.metrics = append(e.metrics, m)
 	e.mu.Unlock()

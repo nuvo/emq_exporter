@@ -1,14 +1,20 @@
 package main
 
 import (
+	"io/ioutil"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/onsi/gomega/ghttp"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
-var _ = Describe("Main", func() {
+var _ = Describe("Utility Functions", func() {
+
 	Describe("Loading credentials", func() {
+
 		Context("loading from env vars", func() {
 
 			AfterEach(func() {
@@ -149,35 +155,113 @@ var _ = Describe("Main", func() {
 		})
 	})
 
-	Describe("Utility functions", func() {
-		Context("parsing strings", func() {
+	Context("parsing strings", func() {
 
-			It("should parse a simple float", func() {
-				s := "0.5"
+		It("should parse a simple float", func() {
+			s := "0.5"
 
-				v, err := parseString(s)
+			v, err := parseString(s)
 
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(v).Should(Equal(0.5))
-			})
-
-			It("should parse byte represented as string", func() {
-				s := "123.19M"
-
-				v, err := parseString(s)
-
-				Expect(err).ShouldNot(HaveOccurred())
-				Expect(v).Should(Equal(1.29174077e+08))
-			})
-
-			It("should fail on invalid string", func() {
-				s := "invalid string"
-
-				v, err := parseString(s)
-
-				Expect(err).Should(HaveOccurred())
-				Expect(v).Should(Equal(float64(0)))
-			})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(v).Should(Equal(0.5))
 		})
+
+		It("should parse byte represented as string", func() {
+			s := "123.19M"
+
+			v, err := parseString(s)
+
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(v).Should(Equal(1.29174077e+08))
+		})
+
+		It("should fail on invalid string", func() {
+			s := "invalid string"
+
+			v, err := parseString(s)
+
+			Expect(err).Should(HaveOccurred())
+			Expect(v).Should(Equal(float64(0)))
+		})
+	})
+
+	Context("creating a new metric", func() {
+		It("should return a valid metric", func() {
+			m := metric{
+				kind:  prometheus.GaugeValue,
+				name:  "emq_node_memory_current",
+				help:  "Current memory usage",
+				value: 1.5533,
+			}
+
+			pm, err := newMetric(m)
+
+			Expect(err).ToNot(HaveOccurred())
+			Expect(pm.Desc().String()).To(Equal("Desc{fqName: \"emq_node_memory_current\", help: \"Current memory usage\", constLabels: {}, variableLabels: []}"))
+		})
+
+		It("should fail when the fqName isn't valid", func() {
+			m := metric{
+				kind:  prometheus.GaugeValue,
+				name:  "/*3433##",
+				help:  "Can't touch this",
+				value: 0.003,
+			}
+
+			pm, err := newMetric(m)
+
+			Expect(err).Should(HaveOccurred())
+			Expect(err.Error()).To(Equal("\"/*3433##\" is not a valid metric name"))
+			Expect(pm).To(BeNil())
+		})
+	})
+})
+
+//helper function to load json data from the testdata folder
+func loadData(path string) []byte {
+	b, err := ioutil.ReadFile("testdata/" + path)
+	if err != nil {
+		panic(err)
+	}
+	return b
+}
+
+var _ = Describe("Exporter", func() {
+	const timeout = 5 * time.Second
+
+	var (
+		s *ghttp.Server
+		e *Exporter
+
+		//body []byte
+	)
+
+	BeforeEach(func() {
+		s = ghttp.NewServer()
+
+		c := &config{
+			host:       s.URL(),
+			username:   "admin",
+			password:   "public",
+			node:       "emq@" + s.URL(),
+			apiVersion: "v3",
+		}
+
+		e = NewExporter(c, timeout)
+
+	})
+
+	AfterEach(func() {
+		s.Close()
+	})
+
+	It("should send desc to the channel", func(done Done) {
+		ch := make(chan *prometheus.Desc)
+
+		go e.Describe(ch)
+		Expect(<-ch).To(ContainSubstring("emq_up"))
+		Expect(<-ch).To(ContainSubstring("emq_exporter_total_scrapes"))
+
+		close(done)
 	})
 })
