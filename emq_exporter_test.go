@@ -3,11 +3,9 @@ package main
 import (
 	"io/ioutil"
 	"os"
-	"time"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	"github.com/onsi/gomega/ghttp"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -226,6 +224,7 @@ func loadData(path string) []byte {
 	return b
 }
 
+/*
 var _ = Describe("Exporter", func() {
 	const timeout = 5 * time.Second
 
@@ -266,3 +265,4 @@ var _ = Describe("Exporter", func() {
 		close(done)
 	})
 })
+*/

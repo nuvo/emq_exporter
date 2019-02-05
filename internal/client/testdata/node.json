@@ -1,0 +1,19 @@
+{
+  "code": 0,
+  "data": {
+    "connections": 0,
+    "load1": "2.04",
+    "load15": "1.14",
+    "load5": "1.25",
+    "max_fds": 1048576,
+    "memory_total": 154337280,
+    "memory_used": 114375208,
+    "name": "emqx",
+    "node_status": "Running",
+    "otp_release": "R21/10.2.1",
+    "process_available": 2097152,
+    "process_used": 388,
+    "uptime": "1 hours, 39 minutes, 22 seconds",
+    "version": "v3.0.1"
+  }
+}
