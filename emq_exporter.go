@@ -1,13 +1,12 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
 	"sync"
-	"time"
 
+	"github.com/nuvo/emq_exporter/internal/emqclient"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -19,20 +18,6 @@ const (
 )
 
 var (
-	//scraping endpoints for EMQ v2 api version
-	targetsV2 = map[string]string{
-		"monitoring_metrics": "/api/v2/monitoring/metrics/%s",
-		"monitoring_stats":   "/api/v2/monitoring/stats/%s",
-		"monitoring_nodes":   "/api/v2/monitoring/nodes/%s",
-		"management_nodes":   "/api/v2/management/nodes/%s",
-	}
-	//scraping endpoints for EMQ v3 api version
-	targetsV3 = map[string]string{
-		"node_metrics": "/api/v3/nodes/%s/metrics/",
-		"node_stats":   "/api/v3/nodes/%s/stats/",
-		"nodes":        "/api/v3/nodes/%s",
-	}
-
 	up = prometheus.NewGauge(prometheus.GaugeOpts{
 		Namespace: namespace,
 		Name:      "up",
@@ -51,15 +36,31 @@ var (
 	GitCommit string
 )
 
-// NewExporter returns an initialized Exporter.
-func NewExporter(c *config, timeout time.Duration) *Exporter {
+type metric struct {
+	kind  prometheus.ValueType
+	value float64
+	name  string
+	help  string
+}
 
+// Exporter collects EMQ stats from the given host and exports them using
+// the prometheus metrics package.
+type Exporter struct {
+	fetcher Fetcher
+	mu      *sync.Mutex
+	metrics []*metric
+}
+
+//Fetcher knows how to fetch metrics from emq
+type Fetcher interface {
+	Fetch() (map[string]interface{}, error)
+}
+
+// NewExporter returns an initialized Exporter.
+func NewExporter(fetcher Fetcher) *Exporter {
 	return &Exporter{
-		config: c,
-		client: &http.Client{
-			Timeout: timeout,
-		},
-		mu: &sync.Mutex{},
+		fetcher: fetcher,
+		mu:      &sync.Mutex{},
 	}
 }
 
@@ -112,27 +113,24 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 // insert them into exporter.metrics array
 func (e *Exporter) scrape() error {
 
-	for name, path := range e.config.targets {
+	data, err := e.fetcher.Fetch()
+	if err != nil {
+		return err
+	}
 
-		data, err := e.fetch(path)
-		if err != nil {
-			return err
-		}
-
-		for k, v := range data {
-			fqName := fmt.Sprintf("%s_%s_%s", namespace, name, strings.Replace(k, "/", "_", -1))
-			switch vv := v.(type) {
-			case string:
-				val, err := parseString(vv)
-				if err != nil {
-					break
-				}
-				e.add(fqName, k, val)
-			case float64:
-				e.add(fqName, k, vv)
-			default:
-				log.Debugln(k, "is of type I don't know how to handle")
+	for k, v := range data {
+		fqName := fmt.Sprintf("%s_%s", namespace, k)
+		switch vv := v.(type) {
+		case string:
+			val, err := parseString(vv)
+			if err != nil {
+				break
 			}
+			e.add(fqName, k, val)
+		case float64:
+			e.add(fqName, k, vv)
+		default:
+			log.Debugln(k, "is of type I don't know how to handle")
 		}
 	}
 
@@ -166,55 +164,6 @@ func (e *Exporter) add(fqName, help string, value float64) {
 	e.mu.Unlock()
 }
 
-//get the response from the provided target url
-func (e *Exporter) fetch(target string) (map[string]interface{}, error) {
-
-	data := &emqResponse{}
-	response := make(map[string]interface{})
-
-	u := e.config.host + fmt.Sprintf(target, e.config.node)
-
-	log.Debugln("fetching from", u)
-
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		return response, fmt.Errorf("Failed to create http request: %v", err)
-	}
-
-	req.SetBasicAuth(e.config.username, e.config.password)
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "emp_exporter/"+GitTag)
-
-	res, err := e.client.Do(req)
-	if err != nil {
-		return response, fmt.Errorf("Failed to get metrics from %s: %v", u, err)
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return response, fmt.Errorf("Received status code not ok %s", u)
-	}
-
-	if err := json.NewDecoder(res.Body).Decode(data); err != nil {
-		return response, fmt.Errorf("Error in json decoder %v", err)
-	}
-
-	if data.Code != 0 {
-		return response, fmt.Errorf("Recvied code != 0 from EMQ %f", data.Code)
-	}
-
-	//Print the returned response data for debuging
-	log.Debugf("%#v", *data)
-
-	if e.config.apiVersion == "v2" {
-		response = data.Result
-	} else {
-		response = data.Data
-	}
-
-	return response, nil
-}
-
 func main() {
 	var (
 		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9540").String()
@@ -222,7 +171,6 @@ func main() {
 		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:18083").Short('u').String()
 		emqCreds      = kingpin.Flag("emq.creds-file", "Path to json file containing emq credentials").Default("./auth.json").Short('f').String()
 		emqNodeName   = kingpin.Flag("emq.node", "Node name of the emq node to scrape.").Default("emq@127.0.0.1").Short('n').String()
-		emqTimeout    = kingpin.Flag("emq.timeout", "Timeout for trying to get stats from emq").Default("5s").Duration()
 		emqAPIVersion = kingpin.Flag("emq.api-version", "The API version used by EMQ. Valid values: [v2, v3]").Default("v2").Enum("v2", "v3")
 	)
 
@@ -242,22 +190,9 @@ func main() {
 	log.Infoln("Starting emq_exporter")
 	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
 
-	//config for use in the exporter
-	conf := &config{
-		host:       *emqURI,
-		username:   username,
-		password:   password,
-		node:       *emqNodeName,
-		apiVersion: *emqAPIVersion,
-	}
+	f := emqclient.NewClient(*emqURI, *emqNodeName, *emqAPIVersion, username, password)
 
-	if *emqAPIVersion == "v2" {
-		conf.targets = targetsV2
-	} else {
-		conf.targets = targetsV3
-	}
-
-	exporter := NewExporter(conf, *emqTimeout)
+	exporter := NewExporter(f)
 
 	prometheus.MustRegister(exporter)
 

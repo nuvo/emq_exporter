@@ -1,9 +1,7 @@
 # A Self-Documenting Makefile: http://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
-
 IMAGE_NAME := emq_exporter
 IMAGE_TAG ?= $(subst /,-,$(shell git rev-parse --abbrev-ref HEAD))
 IP = $(shell docker inspect -f '{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}' emqx)
-RUNNING = $(shell docker ps | grep emqx)
 
 GO111MODULE := on
 GO ?= GO111MODULE=$(GO111MODULE) go
@@ -24,7 +22,7 @@ vet: init ## Vet code using go vet
 
 build: fmt vet test ## Build binaries
 	@echo ">> building binaries"
-	$(GO) build -o ./bin/emq_exporter ./...
+	$(GO) build -o ./bin/emq_exporter .
 
 test: fmt vet ## Run tests using go test
 	@echo ">> running tests"
