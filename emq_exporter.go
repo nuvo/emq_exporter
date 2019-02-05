@@ -6,7 +6,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/nuvo/emq_exporter/internal/emqclient"
+	"github.com/nuvo/emq_exporter/internal/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -36,6 +36,13 @@ var (
 	GitCommit string
 )
 
+//Fetcher knows how to fetch metrics from emq
+type Fetcher interface {
+	Fetch() (map[string]interface{}, error)
+}
+
+//metric is an internal representation of a metric before being processed
+//and sent to prometheus
 type metric struct {
 	kind  prometheus.ValueType
 	value float64
@@ -51,11 +58,6 @@ type Exporter struct {
 	metrics []*metric
 }
 
-//Fetcher knows how to fetch metrics from emq
-type Fetcher interface {
-	Fetch() (map[string]interface{}, error)
-}
-
 // NewExporter returns an initialized Exporter.
 func NewExporter(fetcher Fetcher) *Exporter {
 	return &Exporter{
@@ -66,7 +68,6 @@ func NewExporter(fetcher Fetcher) *Exporter {
 
 // Collect implements prometheus.Collector.
 func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
-
 	var err error
 
 	if err = e.scrape(); err != nil {
@@ -112,7 +113,6 @@ func (e *Exporter) Describe(ch chan<- *prometheus.Desc) {
 // get the json responses from the targets map, process them and
 // insert them into exporter.metrics array
 func (e *Exporter) scrape() error {
-
 	data, err := e.fetcher.Fetch()
 	if err != nil {
 		return err
@@ -190,9 +190,9 @@ func main() {
 	log.Infoln("Starting emq_exporter")
 	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
 
-	f := emqclient.NewClient(*emqURI, *emqNodeName, *emqAPIVersion, username, password)
+	c := client.NewClient(*emqURI, *emqNodeName, *emqAPIVersion, username, password)
 
-	exporter := NewExporter(f)
+	exporter := NewExporter(c)
 
 	prometheus.MustRegister(exporter)
 

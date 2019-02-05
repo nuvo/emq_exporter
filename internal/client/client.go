@@ -1,4 +1,4 @@
-package emqclient
+package client
 
 import (
 	"encoding/json"
@@ -66,7 +66,7 @@ func NewClient(host, node, apiVersion, username, password string) *Client {
 }
 
 //Fetch gets all the metrics from the emq api listed in the targets map
-//it implements emq_exporter.Fetcher
+//implements emq_exporter.Fetcher
 func (c *Client) Fetch() (map[string]interface{}, error) {
 
 	data := make(map[string]interface{})
@@ -128,7 +128,7 @@ func (c *Client) get(path string) (map[string]interface{}, error) {
 	return data, nil
 }
 
-//newRequest creates and API request, setting the relevant headers
+//newRequest creates a new http request, setting the relevant headers
 func (c *Client) newRequest(path string) (req *http.Request, err error) {
 
 	u := c.host + fmt.Sprintf(path, c.node)
