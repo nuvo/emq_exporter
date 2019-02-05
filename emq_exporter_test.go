@@ -223,6 +223,9 @@ func randFloat() float64 {
 //mock fetcher for testing
 type mockFetcher struct{}
 
+//ensure mockFetcher implements Fetcher
+var _ Fetcher = &mockFetcher{}
+
 func (m *mockFetcher) Fetch() (data map[string]interface{}, err error) {
 	data = map[string]interface{}{
 		"nodes_metrics_messages_qos1_sent":      randFloat(),
