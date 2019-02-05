@@ -26,7 +26,7 @@ build: fmt vet test ## Build binaries
 
 test: fmt vet ## Run tests using go test
 	@echo ">> running tests"
-	$(GO) test ./... -coverprofile cover.out
+	$(GO) test ./... -cover -race
 
 docker: build ## Build docker image
 	@echo ">> building docker image"

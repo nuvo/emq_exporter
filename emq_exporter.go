@@ -139,29 +139,26 @@ func (e *Exporter) scrape() error {
 
 //add adds a metric to the exporter.metrics array
 func (e *Exporter) add(fqName, help string, value float64) {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
 	//check if the metric with a given fqName exists
 	for _, v := range e.metrics {
 		if strings.Contains(newDesc(*v).String(), fqName) {
-			//update the metric value
-			e.mu.Lock()
 			v.value = value
-			e.mu.Unlock()
 			return
 		}
 	}
 
-	//create a new metric
-	m := &metric{
+	//append it to the e.metrics array
+	e.metrics = append(e.metrics, &metric{
 		kind:  prometheus.GaugeValue,
 		name:  fqName,
 		help:  help,
 		value: value,
-	}
+	})
 
-	//append it to the e.metrics array
-	e.mu.Lock()
-	e.metrics = append(e.metrics, m)
-	e.mu.Unlock()
+	return
 }
 
 func main() {

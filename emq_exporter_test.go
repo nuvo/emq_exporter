@@ -1,7 +1,7 @@
 package main
 
 import (
-	"io/ioutil"
+	"math/rand"
 	"os"
 
 	. "github.com/onsi/ginkgo"
@@ -215,54 +215,86 @@ var _ = Describe("Utility Functions", func() {
 	})
 })
 
-//helper function to load json data from the testdata folder
-func loadData(path string) []byte {
-	b, err := ioutil.ReadFile("testdata/" + path)
-	if err != nil {
-		panic(err)
-	}
-	return b
+//helper function to create random floats
+func randFloat() float64 {
+	return rand.Float64() * 1000
 }
 
-/*
+//mock fetcher for testing
+type mockFetcher struct{}
+
+func (m *mockFetcher) Fetch() (data map[string]interface{}, err error) {
+	data = map[string]interface{}{
+		"nodes_metrics_messages_qos1_sent":      randFloat(),
+		"nodes_metrics_packets_pubrel_missed":   randFloat(),
+		"nodes_metrics_packets_puback_sent":     randFloat(),
+		"nodes_metrics_messages_received":       randFloat(),
+		"nodes_metrics_packets_unsuback":        randFloat(),
+		"nodes_metrics_packets_pubrel_sent":     randFloat(),
+		"nodes_metrics_packets_subscribe":       randFloat(),
+		"nodes_metrics_packets_connack":         randFloat(),
+		"nodes_metrics_packets_disconnect_sent": randFloat(),
+		"nodes_metrics_packets_pubcomp_sent":    randFloat(),
+		"nodes_metrics_packets_unsubscribe":     randFloat(),
+		"nodes_metrics_packets_auth":            randFloat(),
+		"nodes_metrics_packets_suback":          randFloat(),
+		"nodes_metrics_packets_pubrec_received": randFloat(),
+		"nodes_metrics_messages_expired":        randFloat(),
+		"nodes_metrics_messages_qos2_received":  randFloat(),
+		"nodes_metrics_packets_sent":            randFloat(),
+		"nodes_metrics_packets_pubrel_received": randFloat(),
+		"nodes_metrics_messages_qos0_received":  randFloat(),
+		"nodes_connections":                     randFloat(),
+		"nodes_load1":                           "1.26",
+		"nodes_load15":                          "1.08",
+		"nodes_load5":                           "1.19",
+		"nodes_max_fds":                         1048576,
+		"nodes_memory_total":                    155385856,
+		"nodes_memory_used":                     114687840,
+		"nodes_name":                            "emqx@172.17.0.2",
+		"nodes_node_status":                     "Running",
+		"nodes_otp_release":                     "R21/10.2.1",
+		"nodes_process_available":               2097152,
+		"nodes_process_used":                    388,
+		"nodes_uptime":                          "3 hours, 46 minutes, 36 seconds",
+		"nodes_version":                         "v3.0.1",
+	}
+
+	return
+}
+
 var _ = Describe("Exporter", func() {
-	const timeout = 5 * time.Second
 
 	var (
-		s *ghttp.Server
 		e *Exporter
-
-		//body []byte
+		f *mockFetcher
 	)
 
 	BeforeEach(func() {
-		s = ghttp.NewServer()
-
-		c := &config{
-			host:       s.URL(),
-			username:   "admin",
-			password:   "public",
-			node:       "emq@" + s.URL(),
-			apiVersion: "v3",
-			targets:    targetsV3,
-		}
-
-		e = NewExporter(c, timeout)
-
+		f = &mockFetcher{}
+		e = NewExporter(f)
 	})
 
-	AfterEach(func() {
-		s.Close()
-	})
-
-	It("should send desc to the channel", func(done Done) {
+	It("should send description to the channel", func(done Done) {
 		ch := make(chan *prometheus.Desc)
 
 		go e.Describe(ch)
-		Expect(<-ch).To(ContainSubstring("emq_up"))
-		Expect(<-ch).To(ContainSubstring("emq_exporter_total_scrapes"))
+		Eventually(ch).Should(Receive())
 
 		close(done)
 	})
+
+	It("should send metrics to the channel", func(done Done) {
+		ch := make(chan prometheus.Metric)
+
+		//run multiple Collect() goroutines to make sure:
+		//1. no data race (go test . -race)
+		//2. metrics are being updated properly
+		for i := 0; i < 1000; i++ {
+			go e.Collect(ch)
+			Eventually(ch).Should(Receive())
+		}
+
+		close(done)
+	}, 5)
 })
-*/
