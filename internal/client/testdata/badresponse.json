@@ -1,0 +1,24 @@
+{
+  "code": 1,
+  "data": {
+    "subscriptions/shared/max": 0,
+    "subscriptions/max": 0,
+    "subscribers/max": 0,
+    "topics/count": 0,
+    "subscriptions/count": 0,
+    "suboptions/max": 0,
+    "topics/max": 0,
+    "sessions/persistent/max": 0,
+    "connections/max": 0,
+    "subscriptions/shared/count": 0,
+    "sessions/persistent/count": 0,
+    "retained/count": 3,
+    "routes/count": 0,
+    "sessions/count": 0,
+    "retained/max": 3,
+    "sessions/max": 0,
+    "routes/max": 0,
+    "subscribers/count": 0,
+    "connections/count": 0
+  }
+}

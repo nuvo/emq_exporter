@@ -21,9 +21,9 @@ var (
 	}
 	//scraping endpoints for EMQ v3 api version
 	targetsV3 = map[string]string{
-		"node_metrics": "/api/v3/nodes/%s/metrics/",
-		"node_stats":   "/api/v3/nodes/%s/stats/",
-		"nodes":        "/api/v3/nodes/%s",
+		"nodes_metrics": "/api/v3/nodes/%s/metrics/",
+		"nodes_stats":   "/api/v3/nodes/%s/stats/",
+		"nodes":         "/api/v3/nodes/%s",
 	}
 )
 
@@ -87,6 +87,11 @@ func (c *Client) Fetch() (map[string]interface{}, error) {
 	return data, nil
 }
 
+//set the host name for the client (mostly for testing purposes)
+func (c *Client) setHost(host string) {
+	c.host = host
+}
+
 //get preforms an http GET call to the provided path and returns the response
 func (c *Client) get(path string) (map[string]interface{}, error) {
 
@@ -132,6 +137,10 @@ func (c *Client) get(path string) (map[string]interface{}, error) {
 func (c *Client) newRequest(path string) (req *http.Request, err error) {
 
 	u := c.host + fmt.Sprintf(path, c.node)
+
+	if !strings.Contains(u, "://") {
+		u = fmt.Sprintf("http://%s", u)
+	}
 
 	log.Debugln("Fetching from", u)
 
