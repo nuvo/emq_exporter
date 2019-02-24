@@ -99,8 +99,19 @@ If things aren't working as expected, try to start the exporter with `--log.leve
 To run EMQ exporter as a Docker container, run:
 
 ```bash
-docker run -p 9540:9540 nuvo/emq_exporter:v0.3.1 ---emq.uri "http://localhost:8080"
+docker run \
+  -d \
+  -p 9540:9540 \
+  --name emq_exporter \
+  -v /path/to/auth.json:/etc/emq/auth.json \
+  nuvo/emq_exporter:v0.4.1 \
+  --emq.uri "http://<emq-ip>:8080" \
+  --emq.node "emqx@<emq-ip>" \
+  --emq.api-version "v3" \
+  --emq.creds-file "/etc/emq/auth.json"
 ```
+
+Alternatively, One can also supply the credentials using `env vars`, replace the volume mount (`-v` flag) with `-e EMQ_USERNAME=<my-username> -e EMQ_PASSWORD=<super-secret>`
 
 ### Kubernetes
 
