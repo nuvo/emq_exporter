@@ -34,6 +34,7 @@ var _ = Describe("Client", func() {
 			"v3",
 			"admin",
 			"public",
+			false,
 		)
 	})
 

@@ -35,25 +35,27 @@ type emqResponse struct {
 
 //Client manages communication with emq api
 type Client struct {
-	hc         *http.Client
-	host       string
-	node       string
-	apiVersion string
-	targets    map[string]string
-	username   string
-	password   string
+	hc             *http.Client
+	host           string
+	node           string
+	apiVersion     string
+	targets        map[string]string
+	username       string
+	password       string
+	exportNodeName bool
 }
 
 //NewClient returns a new emq client
-func NewClient(host, node, apiVersion, username, password string) *Client {
+func NewClient(host, node, apiVersion, username, password string, exportNodeName bool) *Client {
 
 	c := &Client{
-		hc:         &http.Client{Timeout: timeout},
-		host:       host,
-		node:       node,
-		apiVersion: apiVersion,
-		username:   username,
-		password:   password,
+		hc:             &http.Client{Timeout: timeout},
+		host:           host,
+		node:           node,
+		apiVersion:     apiVersion,
+		username:       username,
+		password:       password,
+		exportNodeName: exportNodeName,
 	}
 
 	if apiVersion == "v2" {
@@ -70,6 +72,7 @@ func NewClient(host, node, apiVersion, username, password string) *Client {
 func (c *Client) Fetch() (map[string]interface{}, error) {
 
 	data := make(map[string]interface{})
+	nodeName := strings.Split(c.node, "@")[0]
 
 	for name, path := range c.targets {
 
@@ -79,7 +82,12 @@ func (c *Client) Fetch() (map[string]interface{}, error) {
 		}
 
 		for k, v := range res {
-			mName := fmt.Sprintf("%s_%s", name, strings.Replace(k, "/", "_", -1))
+			var mName string
+			if c.exportNodeName {
+				mName = fmt.Sprintf("%s_%s_%s", nodeName, name, strings.Replace(k, "/", "_", -1))
+			} else {
+				mName = fmt.Sprintf("%s_%s", name, strings.Replace(k, "/", "_", -1))
+			}
 			data[mName] = v
 		}
 	}
