@@ -94,6 +94,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	e.mu.Unlock()
 
 	for _, i := range metricList {
+		i.name = strings.Replace(i.name, ".", "_", -1)
 		m, err := newMetric(i)
 		if err != nil {
 			log.Errorf("newMetric: %v", err)
