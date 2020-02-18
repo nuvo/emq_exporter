@@ -11,10 +11,12 @@ env:
     - GO111MODULE=on
 
 install:
-    - make init
+    - go get -v github.com/onsi/ginkgo/ginkgo
+    - go get -v github.com/onsi/gomega
+    - go get -v -t ./...
     - export PATH=$PATH:$HOME/gopath/bin
 
-script: $HOME/gopath/bin/ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race --compilers=2
+script: ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race --compilers=2
 
 # call goreleaser
 deploy:
