@@ -188,6 +188,10 @@ func main() {
 	log.Infoln("Starting emq_exporter")
 	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
 
+	if *emqAPIVersion == "v2" {
+		log.Warnln("v2 api version is deprecated and will be removed in future versions")
+	}
+
 	c := client.NewClient(*emqURI, *emqNodeName, *emqAPIVersion, username, password)
 
 	exporter := NewExporter(c)
