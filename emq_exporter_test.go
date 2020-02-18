@@ -269,8 +269,9 @@ func (m *mockFetcher) Fetch() (data map[string]interface{}, err error) {
 var _ = Describe("Exporter", func() {
 
 	var (
-		e *Exporter
-		f *mockFetcher
+		e       *Exporter
+		f       *mockFetcher
+		timeout = 2.5
 	)
 
 	BeforeEach(func() {
@@ -298,6 +299,6 @@ var _ = Describe("Exporter", func() {
 			Eventually(ch).Should(Receive())
 		}
 
-		close(done)
-	}, 5)
+		defer close(done)
+	}, timeout)
 })

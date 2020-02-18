@@ -10,6 +10,7 @@ all: test build ## Run tests and build the binary
 
 init:
 	@echo ">> running go mod download"
+	$(GO) get -v -t ./...
 	$(GO) mod download
 
 fmt: init ## Format code using go fmt
@@ -26,7 +27,7 @@ build: fmt vet test ## Build binaries
 
 test: fmt vet ## Run tests using go test
 	@echo ">> running tests"
-	$(GO) test ./... -cover -race
+	ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race --compilers=2
 
 docker: build ## Build docker image
 	@echo ">> building docker image"
