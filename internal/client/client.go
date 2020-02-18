@@ -25,6 +25,11 @@ var (
 		"nodes_stats":   "/api/v3/nodes/%s/stats/",
 		"nodes":         "/api/v3/nodes/%s",
 	}
+	targetsV4 = map[string]string{
+		"nodes_metrics": "/api/v4/nodes/%s/metrics/",
+		"nodes_stats":   "/api/v4/nodes/%s/stats/",
+		"nodes":         "/api/v4/nodes/%s",
+	}
 )
 
 type emqResponse struct {
@@ -56,10 +61,13 @@ func NewClient(host, node, apiVersion, username, password string) *Client {
 		password:   password,
 	}
 
-	if apiVersion == "v2" {
+	switch apiVersion {
+	case "v2":
 		c.targets = targetsV2
-	} else {
+	case "v3":
 		c.targets = targetsV3
+	case "v4":
+		c.targets = targetsV4
 	}
 
 	return c
@@ -110,7 +118,7 @@ func (c *Client) get(path string) (map[string]interface{}, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("Received status code not ok %s", req.URL)
+		return nil, fmt.Errorf("Received status code not ok %s, got %d", req.URL, res.StatusCode)
 	}
 
 	if err := json.NewDecoder(res.Body).Decode(er); err != nil {
@@ -146,6 +154,7 @@ func (c *Client) newRequest(path string) (req *http.Request, err error) {
 
 	req, err = http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
+		log.Debugf("Failed to create http request: %v", err)
 		return req, fmt.Errorf("Failed to create http request: %v", err)
 	}
 
