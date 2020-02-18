@@ -39,7 +39,7 @@ local: ## Start a local emq container for development
 	@docker run --rm -d --name emqx -h emqx -p 18083:18083 -p 8080:8080 emqx/emqx:latest
 
 run: build local ## Run the exporter locally using a local container
-	./bin/emq_exporter -n emqx@$(IP) -f testdata/authfull.json --emq.api-version v3 --log.level debug
+	./bin/emq_exporter -n emqx@$(IP) -f testdata/authfull.json --emq.api-version v4 --log.level debug
 
 help: ## Print this message and exit
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "%-20s %s\n", $$1, $$2}'

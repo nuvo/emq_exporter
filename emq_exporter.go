@@ -169,7 +169,7 @@ func main() {
 		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:18083").Short('u').String()
 		emqCreds      = kingpin.Flag("emq.creds-file", "Path to json file containing emq credentials").Default("./auth.json").Short('f').String()
 		emqNodeName   = kingpin.Flag("emq.node", "Node name of the emq node to scrape.").Default("emq@127.0.0.1").Short('n').String()
-		emqAPIVersion = kingpin.Flag("emq.api-version", "The API version used by EMQ. Valid values: [v2, v3]").Default("v2").Enum("v2", "v3")
+		emqAPIVersion = kingpin.Flag("emq.api-version", "The API version used by EMQ. Valid values: [v2, v3, v4]").Default("v3").Enum("v2", "v3", "v4")
 	)
 
 	log.AddFlags(kingpin.CommandLine)
@@ -187,6 +187,10 @@ func main() {
 
 	log.Infoln("Starting emq_exporter")
 	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
+
+	if *emqAPIVersion == "v2" {
+		log.Warnln("v2 api version is deprecated and will be removed in future versions")
+	}
 
 	c := client.NewClient(*emqURI, *emqNodeName, *emqAPIVersion, username, password)
 
