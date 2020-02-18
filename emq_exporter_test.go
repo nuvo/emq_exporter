@@ -294,11 +294,11 @@ var _ = Describe("Exporter", func() {
 		//run multiple Collect() goroutines to make sure:
 		//1. no data race (go test . -race)
 		//2. metrics are being updated properly
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 10; i++ {
 			go e.Collect(ch)
 			Eventually(ch).Should(Receive())
 		}
 
-		defer close(done)
+		close(done)
 	}, timeout)
 })

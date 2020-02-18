@@ -16,7 +16,7 @@ install:
     - go get -v -t ./...
     - export PATH=$PATH:$HOME/gopath/bin
 
-script: ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race --compilers=2
+script: make test
 
 # call goreleaser
 deploy:
