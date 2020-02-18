@@ -18,10 +18,11 @@ builds:
   ldflags:
   - -s -w -X main.GitTag={{.Tag}} -X main.GitCommit={{.ShortCommit}}
 
-archive:
-  name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}"
-  format: tar.gz
-  wrap_in_directory: true
+archives:
+  - id: tar
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}"
+    format: tar.gz
+    wrap_in_directory: true
 
 dockers:
 - binaries: 
