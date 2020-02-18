@@ -269,8 +269,9 @@ func (m *mockFetcher) Fetch() (data map[string]interface{}, err error) {
 var _ = Describe("Exporter", func() {
 
 	var (
-		e *Exporter
-		f *mockFetcher
+		e       *Exporter
+		f       *mockFetcher
+		timeout = 2.5
 	)
 
 	BeforeEach(func() {
@@ -293,11 +294,11 @@ var _ = Describe("Exporter", func() {
 		//run multiple Collect() goroutines to make sure:
 		//1. no data race (go test . -race)
 		//2. metrics are being updated properly
-		for i := 0; i < 1000; i++ {
+		for i := 0; i < 10; i++ {
 			go e.Collect(ch)
 			Eventually(ch).Should(Receive())
 		}
 
 		close(done)
-	}, 5)
+	}, timeout)
 })

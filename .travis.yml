@@ -14,15 +14,15 @@ install:
     - go get -v github.com/onsi/ginkgo/ginkgo
     - go get -v github.com/onsi/gomega
     - go get -v -t ./...
-    - go mod download
+    - export PATH=$PATH:$HOME/gopath/bin
 
-script: ginkgo -r --randomizeAllSpecs --randomizeSuites --failOnPending --cover --trace --race --compilers=2
+script: make test
 
 # call goreleaser
 deploy:
-- provider: script
-  skip_cleanup: true
-  script: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD && curl -sL https://git.io/goreleaser | bash
-  on:
-    tags: true
-    condition: $TRAVIS_OS_NAME = linux
+    - provider: script
+      skip_cleanup: true
+      script: docker login -u $DOCKER_USER -p $DOCKER_PASSWORD && curl -sL https://git.io/goreleaser | bash
+      on:
+          tags: true
+          condition: $TRAVIS_OS_NAME = linux
