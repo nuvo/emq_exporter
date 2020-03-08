@@ -15,11 +15,11 @@ init:
 	$(GO) get -v -t ./...
 	$(GO) mod download
 
-fmt: init ## Format code using go fmt
+fmt: ## Format code using go fmt
 	@echo ">> formatting code"
 	$(GO) fmt ./...
 
-vet: init ## Vet code using go vet
+vet: ## Vet code using go vet
 	@echo ">> vetting code"
 	$(GO) vet ./...
 
