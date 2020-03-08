@@ -10,6 +10,9 @@ all: test build ## Run tests and build the binary
 
 init:
 	@echo ">> running go mod download"
+	$(GO) get -v github.com/onsi/ginkgo/ginkgo
+	$(GO) get -v github.com/onsi/gomega
+	$(GO) get -v -t ./...
 	$(GO) mod download
 
 fmt: init ## Format code using go fmt

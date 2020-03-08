@@ -12,7 +12,7 @@ env:
 
 install:
     - go mod download
-    - export PATH=$PATH:$HOME/gopath/bin
+    - export PATH=$PATH:$GOPATH/bin
 
 script: make test
 
