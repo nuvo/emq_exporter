@@ -1,22 +1,20 @@
 # .goreleaser.yml
 before:
   hooks:
-    - make init
+    - go mod download
 
 builds:
-- main: .
-  binary: emq_exporter
-  goos:
-  - linux
-  goarch:
-  - amd64
-  env:
-  - CGO_ENABLED=0
-  - GO111MODULE=on
-  flags:
-  - -tags=netgo
-  ldflags:
-  - -s -w -X main.GitTag={{.Tag}} -X main.GitCommit={{.ShortCommit}}
+  - id: main
+    binary: emq_exporter
+    goos:
+      - linux
+    goarch:
+      - amd64
+    env:
+      - CGO_ENABLED=0
+      - GO111MODULE=on
+    ldflags:
+      - -s -w -X main.GitTag={{.Tag}} -X main.GitCommit={{.ShortCommit}}
 
 archives:
   - id: tar
@@ -25,11 +23,11 @@ archives:
     wrap_in_directory: true
 
 dockers:
-- binaries: 
-  - emq_exporter
-  goos: linux
-  goarch: amd64
-  dockerfile: Dockerfile
-  image_templates:
-  - "nuvo/{{ .ProjectName }}:latest"
-  - "nuvo/{{ .ProjectName }}:{{ .Tag }}"
+  - binaries:
+      - emq_exporter
+    goos: linux
+    goarch: amd64
+    dockerfile: Dockerfile
+    image_templates:
+      - "nuvo/{{ .ProjectName }}:latest"
+      - "nuvo/{{ .ProjectName }}:{{ .Tag }}"
