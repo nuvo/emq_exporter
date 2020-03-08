@@ -2,7 +2,7 @@
 language: go
 
 go:
-    - 1.13.x
+    - 1.14.x
 
 services:
     - docker
@@ -11,10 +11,8 @@ env:
     - GO111MODULE=on
 
 install:
-    - go get -v github.com/onsi/ginkgo/ginkgo
-    - go get -v github.com/onsi/gomega
-    - go get -v -t ./...
-    - export PATH=$PATH:$HOME/gopath/bin
+    - make init
+    - export PATH=$PATH:$GOPATH/bin
 
 script: make test
 
