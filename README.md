@@ -27,7 +27,7 @@ Help on flags:
 
 ### EMQ URI
 
-Specify EMQ's node uri and api port using the `--emq.uri` flag (short `-u`). For example,
+Specify EMQ's node uri and api port using the `--emq.uri` flag. For example,
 
 ```bash
 ./emq_exporter --emq.uri "http://localhost:8080"
@@ -36,7 +36,7 @@ Specify EMQ's node uri and api port using the `--emq.uri` flag (short `-u`). For
 Or to scrape a remote host:
 
 ```bash
-./emq_exporter -u "https://emq.example.com:8080"
+./emq_exporter -emq.uri "https://emq.example.com:8080"
 ```
 
 ### Passing Credentials
@@ -60,10 +60,10 @@ The file should be json formatted and contain the following fields:
 }
 ```
 
-When staring `emq_exporter`, point it to the credentials file using `--emq.creds-file` flag (short `-f`):
+When staring `emq_exporter`, point it to the credentials file using `--emq.creds-file` flag:
 
 ```bash
-./emq_exporter -u http://localhost:8080 -f /etc/emq_exporter/auth.json
+./emq_exporter --emq.uri http://localhost:8080 --emq.creds-file /etc/emq_exporter/auth.json
 ```
 
 The default path for credentials file is `$(CWD)/auth.json`. Note that `env vars` take precedence over using a file.
@@ -73,16 +73,16 @@ The default path for credentials file is `$(CWD)/auth.json`. Note that `env vars
 EMQ add a `v3` api version in `EMQX`. To specify the api version, use the `emq.api-version` flag:
 
 ```bash
-./emq_exporter -u http://localhost:8080 --emq.api-version v3
+./emq_exporter --emq.uri http://localhost:8080 --emq.api-version v3
 ```
 
-The `emq_exporter` supports both `v2` and `v3` API versions seamlessly (mutually exclusive, pick either on start up), default is `v2`.
+The `emq_exporter` supports `v2`, `v3` and `v4` API versions seamlessly (mutually exclusive, pick either on start up), default is `v3`.
 
 ### Authentication
 
-The authentication method changed a bit in version `v3` of `emqx`. If you're pulling the metrics through the dashboard port (default `18083`), you can use regular username and password. However, if you're using the API port (default `8080`), you'll need to set up application credentials: 
+The authentication method changed a bit in version `v3` of `emqx`. If you're pulling the metrics through the dashboard port (default `18083`), you can use regular username and password. However, if you're using the API port (default `8080`), you'll need to set up application credentials:
 1. From the emq dashboard side bar -> applications
-2. Select `New App` from the top 
+2. Select `New App` from the top
 3. Fill in the popup window with the relevant details and confirm
 4. View the app details and use `AppID` as `username` and `AppSecret` as `password` (as `creds-file` entries or `env vars`, see above)
 
@@ -115,7 +115,7 @@ Alternatively, One can also supply the credentials using `env vars`, replace the
 
 ### Kubernetes
 
-EMQ exporter was designed to run as a sidecar in the same pod as EMQ itself. 
+EMQ exporter was designed to run as a sidecar in the same pod as EMQ itself.
 See the examples folder for a `kubernetes` manifest that can serve as reference for implementation.
 
 ## Contributing
