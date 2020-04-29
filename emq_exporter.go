@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 	"strings"
@@ -10,7 +11,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 const (
@@ -163,22 +163,19 @@ func (e *Exporter) add(fqName, help string, value float64) {
 }
 
 func main() {
-	var (
-		listenAddress = kingpin.Flag("web.listen-address", "Address to listen on for web interface and telemetry.").Default(":9540").String()
-		metricsPath   = kingpin.Flag("web.telemetry-path", "Path under which to expose metrics.").Default("/metrics").String()
-		emqURI        = kingpin.Flag("emq.uri", "HTTP API address of the EMQ node.").Default("http://127.0.0.1:18083").Short('u').String()
-		emqCreds      = kingpin.Flag("emq.creds-file", "Path to json file containing emq credentials").Default("./auth.json").Short('f').String()
-		emqNodeName   = kingpin.Flag("emq.node", "Node name of the emq node to scrape.").Default("emq@127.0.0.1").Short('n').String()
-		emqAPIVersion = kingpin.Flag("emq.api-version", "The API version used by EMQ. Valid values: [v2, v3, v4]").Default("v3").Enum("v2", "v3", "v4")
-	)
 
-	log.AddFlags(kingpin.CommandLine)
-	kingpin.Version(fmt.Sprintf("Version %s (git-%s)", GitTag, GitCommit))
-	kingpin.CommandLine.HelpFlag.Short('h')
+	emqAPIVersion := flag.String("emq.api-version", "v3", "The API version used by EMQ. Valid values: [v2, v3, v4]")
+	emqCreds := flag.String("emq.creds-file", "./auth.json", "Path to json file containing emq credentials")
+	emqNodeName := flag.String("emq.node", "emq@127.0.0.1", "Node name of the emq node to scrape")
+	emqURI := flag.String("emq.uri", "http://127.0.0.1:18083", "HTTP API address of the EMQ node")
+	logLevel := flag.String("log.level", "info", "log level")
+	webListenAddress := flag.String("web.listen-address", ":9540", "Address to listen on for web interface and telemetry")
+	webMetricsPath := flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics")
 
-	kingpin.Parse()
+	flag.Parse()
 
 	log.Infoln("Loading authentication credentials")
+	log.Debugf("log level: %s", *logLevel)
 
 	username, password, err := findCreds(*emqCreds)
 	if err != nil {
@@ -188,8 +185,12 @@ func main() {
 	log.Infoln("Starting emq_exporter")
 	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
 
-	if *emqAPIVersion == "v2" {
+	switch *emqAPIVersion {
+	case "v2":
 		log.Warnln("v2 api version is deprecated and will be removed in future versions")
+	case "v3", "v4":
+	default:
+		log.Fatalf("unsupported api version: %s", *emqAPIVersion)
 	}
 
 	c := client.NewClient(*emqURI, *emqNodeName, *emqAPIVersion, username, password)
@@ -198,17 +199,18 @@ func main() {
 
 	prometheus.MustRegister(exporter)
 
-	log.Infoln("Listening on", *listenAddress)
-	http.Handle(*metricsPath, promhttp.Handler())
+	log.Infoln("Listening on", *webListenAddress)
+
+	http.Handle(*webMetricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte(`<html>
              <head><title>EMQ Exporter</title></head>
              <body>
              <h1>EMQ Exporter</h1>
-             <p><a href='` + *metricsPath + `'>Metrics</a></p>
+             <p><a href='` + *webMetricsPath + `'>Metrics</a></p>
              </body>
              </html>`))
 	})
 
-	log.Fatal(http.ListenAndServe(*listenAddress, nil))
+	log.Fatal(http.ListenAndServe(*webListenAddress, nil))
 }

@@ -28,7 +28,7 @@ spec:
       serviceAccountName: emqx
       containers:
       - name: exporter
-        image: "nuvo/emq_exporter:v0.3.1"
+        image: "nuvo/emq_exporter:v0.5.0"
         env:
         - name: EMQ_USERNAME
           value: "admin"
