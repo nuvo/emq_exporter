@@ -10,7 +10,7 @@ import (
 
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/common/log"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -26,7 +26,7 @@ func parseString(s string) (float64, error) {
 		//try to convert to bytes
 		u, err := bytefmt.ToBytes(s)
 		if err != nil {
-			log.Debugln("can't parse", s, err)
+			log.Debug().Msgf("can't parse %s, got %s", s, err.Error())
 			return v, err
 		}
 		v = float64(u)
@@ -50,11 +50,11 @@ func newMetric(m metric) (prometheus.Metric, error) {
 //2. A file under the specified path
 //returns the found username and password or error
 func findCreds(path string) (u, p string, err error) {
-	log.Debugln("Loading credentails")
+	log.Debug().Msg("Loading credentails")
 	u, p, err = loadFromEnv()
 
 	if err != nil {
-		log.Debugln(err)
+		log.Debug().Msg(err.Error())
 		return loadFromFile(path)
 	}
 
@@ -63,7 +63,7 @@ func findCreds(path string) (u, p string, err error) {
 
 //loadFromEnv tries to find auth details in env vars
 func loadFromEnv() (u, p string, err error) {
-	log.Debugln("Trying to load credentails from environment")
+	log.Debug().Msg("Trying to load credentails from environment")
 	var ok bool
 
 	u, ok = os.LookupEnv(usernameEnv)
@@ -83,25 +83,25 @@ func loadFromEnv() (u, p string, err error) {
 
 //loadFromFile tries to load auth details from a file
 func loadFromFile(path string) (u, p string, err error) {
-	log.Debugln("Trying to load credentails from file")
+	log.Debug().Msg("Trying to load credentails from file")
 	var data map[string]string
 
 	absPath, ferr := filepath.Abs(path)
 	if ferr != nil {
-		log.Debugln(ferr)
+		log.Debug().Msg(ferr.Error())
 		err = ferr
 		return
 	}
 
 	f, rerr := ioutil.ReadFile(absPath)
 	if rerr != nil {
-		log.Debugln(rerr)
+		log.Debug().Msg(rerr.Error())
 		err = rerr
 		return
 	}
 
 	if jerr := json.Unmarshal(f, &data); jerr != nil {
-		log.Debugln(jerr)
+		log.Debug().Msg(jerr.Error())
 		err = jerr
 		return
 	}

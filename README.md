@@ -36,7 +36,7 @@ Specify EMQ's node uri and api port using the `--emq.uri` flag. For example,
 Or to scrape a remote host:
 
 ```bash
-./emq_exporter -emq.uri "https://emq.example.com:8080"
+./emq_exporter --emq.uri "https://emq.example.com:8080"
 ```
 
 ### Passing Credentials
@@ -77,6 +77,7 @@ EMQ add a `v3` api version in `EMQX`. To specify the api version, use the `emq.a
 ```
 
 The `emq_exporter` supports `v2`, `v3` and `v4` API versions seamlessly (mutually exclusive, pick either on start up), default is `v3`.
+**Please note the `v2` api is deprecated and will be removed in future versions**
 
 ### Authentication
 
