@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/common/log"
+	"github.com/rs/zerolog/log"
 )
 
 const timeout = 5 * time.Second
@@ -130,7 +130,7 @@ func (c *Client) get(path string) (map[string]interface{}, error) {
 	}
 
 	//Print the returned response data for debuging
-	log.Debugf("%#v", *er)
+	log.Debug().Msgf("%#v", *er)
 
 	if c.apiVersion == "v2" {
 		data = er.Result
@@ -150,11 +150,11 @@ func (c *Client) newRequest(path string) (req *http.Request, err error) {
 		u = fmt.Sprintf("http://%s", u)
 	}
 
-	log.Debugln("Fetching from", u)
+	log.Debug().Msg("Fetching from " + u)
 
 	req, err = http.NewRequest(http.MethodGet, u, nil)
 	if err != nil {
-		log.Debugf("Failed to create http request: %v", err)
+		log.Debug().Msg("Failed to create http request: " + err.Error())
 		return req, fmt.Errorf("Failed to create http request: %v", err)
 	}
 

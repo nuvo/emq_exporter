@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"net/http"
@@ -10,7 +11,8 @@ import (
 	"github.com/nuvo/emq_exporter/internal/client"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
 const (
@@ -71,7 +73,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 	var err error
 
 	if err = e.scrape(); err != nil {
-		log.Warnln(err)
+		log.Warn().Msg(err.Error())
 	}
 
 	//Send the metrics to the channel
@@ -97,7 +99,7 @@ func (e *Exporter) Collect(ch chan<- prometheus.Metric) {
 		i.name = strings.Replace(i.name, ".", "_", -1)
 		m, err := newMetric(i)
 		if err != nil {
-			log.Errorf("newMetric: %v", err)
+			log.Error().Msg("newMetric: " + err.Error())
 			continue
 		}
 		ch <- m
@@ -131,7 +133,7 @@ func (e *Exporter) scrape() error {
 		case float64:
 			e.add(fqName, k, vv)
 		default:
-			log.Debugln(k, "is of type I don't know how to handle")
+			log.Debug().Msg(k + " is of type I don't know how to handle")
 		}
 	}
 
@@ -168,29 +170,38 @@ func main() {
 	emqCreds := flag.String("emq.creds-file", "./auth.json", "Path to json file containing emq credentials")
 	emqNodeName := flag.String("emq.node", "emq@127.0.0.1", "Node name of the emq node to scrape")
 	emqURI := flag.String("emq.uri", "http://127.0.0.1:18083", "HTTP API address of the EMQ node")
-	logLevel := flag.String("log.level", "info", "log level")
+	debug := flag.Bool("debug", false, "sets log level to debug")
 	webListenAddress := flag.String("web.listen-address", ":9540", "Address to listen on for web interface and telemetry")
 	webMetricsPath := flag.String("web.telemetry-path", "/metrics", "Path under which to expose metrics")
 
 	flag.Parse()
 
-	log.Infoln("Loading authentication credentials")
-	log.Debugf("log level: %s", *logLevel)
+	//log configs
+	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
+	zerolog.SetGlobalLevel(zerolog.InfoLevel)
+
+	if *debug {
+		zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	}
+
+	log.Logger = log.With().Caller().Logger()
+
+	log.Info().Msg("Loading authentication credentials")
 
 	username, password, err := findCreds(*emqCreds)
 	if err != nil {
-		log.Fatalf("Failed to load credentials: %v", err)
+		log.Fatal().Err(err).Msg("Failed to load credentials:")
 	}
 
-	log.Infoln("Starting emq_exporter")
-	log.Infof("Version %s (git-%s)", GitTag, GitCommit)
+	log.Info().Msg("Starting emq_exporter")
+	log.Info().Msgf("Version %s (git-%s)", GitTag, GitCommit)
 
 	switch *emqAPIVersion {
 	case "v2":
-		log.Warnln("v2 api version is deprecated and will be removed in future versions")
+		log.Warn().Msg("v2 api version is deprecated and will be removed in future versions")
 	case "v3", "v4":
 	default:
-		log.Fatalf("unsupported api version: %s", *emqAPIVersion)
+		log.Fatal().Err(errors.New("unsupported api version")).Msg("unsupported api version: " + *emqAPIVersion)
 	}
 
 	c := client.NewClient(*emqURI, *emqNodeName, *emqAPIVersion, username, password)
@@ -199,7 +210,7 @@ func main() {
 
 	prometheus.MustRegister(exporter)
 
-	log.Infoln("Listening on", *webListenAddress)
+	log.Info().Msg("Listening on " + *webListenAddress)
 
 	http.Handle(*webMetricsPath, promhttp.Handler())
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -212,5 +223,8 @@ func main() {
              </html>`))
 	})
 
-	log.Fatal(http.ListenAndServe(*webListenAddress, nil))
+	if err := http.ListenAndServe(*webListenAddress, nil); err != nil {
+		log.Fatal().Err(err).Msg("startup failed")
+	}
+
 }
