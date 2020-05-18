@@ -76,7 +76,7 @@ EMQ add a `v3` api version in `EMQX`. To specify the api version, use the `emq.a
 ./emq_exporter --emq.uri http://localhost:8080 --emq.api-version v3
 ```
 
-The `emq_exporter` supports `v2`, `v3` and `v4` API versions seamlessly (mutually exclusive, pick either on start up), default is `v3`.
+The `emq_exporter` supports `v2`, `v3` and `v4` API versions seamlessly (mutually exclusive, pick either on start up), default is `v3`. However, from `v4` the default port is 8081.
 **Please note the `v2` api is deprecated and will be removed in future versions**
 
 ### Authentication
